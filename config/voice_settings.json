@@ -1,0 +1,72 @@
+{
+  "api_config": {
+    "base_url": "wss://openspeech.bytedance.com/api/v3/realtime/dialogue",
+    "app_id": "2440934313",
+    "access_key": "snJDH6bnvjspmGT-zSyGUceWVs7O9xNK",
+    "resource_id": "volc.speech.dialog",
+    "app_key": "PlgvMymc7f3tQnJ6"
+  },
+  "voice_speakers": {
+    "male": "zh_male_yunzhou_jupiter_bigtts",
+    "female": "zh_female_aojiaonvyou_tob",
+    "custom": "S_XXXXXX"
+  },
+  "audio_settings": {
+    "input": {
+      "chunk": 3200,
+      "format": "pcm",
+      "channels": 1,
+      "sample_rate": 16000
+    },
+    "output": {
+      "chunk": 3200,
+      "format": "pcm",
+      "channels": 1,
+      "sample_rate": 24000
+    }
+  },
+  "session_defaults": {
+    "asr": {
+      "end_smooth_window_ms": 1500
+    },
+    "location": {
+      "city": "北京"
+    },
+    "extra": {
+      "strict_audit": false,
+      "audit_response": "支持客户自定义安全审核回复话术。",
+      "recv_timeout": 10,
+      "input_mod": "audio"
+    }
+  },
+  "character_voice_mapping": {
+    "socrates": {
+      "voice_type": "male",
+      "speaking_style": "语言深刻富有哲理，喜欢通过提问引导思考，语调沉稳而睿智。"
+    },
+    "einstein": {
+      "voice_type": "male", 
+      "speaking_style": "表达严谨准确，善于用简单的比喻解释复杂概念，语调自信而幽默。"
+    },
+    "marie_curie": {
+      "voice_type": "female",
+      "speaking_style": "语言严谨而温和，鼓励他人追求科学真理，语调坚定而温柔。"
+    },
+    "shakespeare": {
+      "voice_type": "male",
+      "speaking_style": "语言优美富有诗意，善用比喻和修辞，语调富有戏剧性和感情。"
+    },
+    "confucius": {
+      "voice_type": "male",
+      "speaking_style": "言简意赅，富含哲理，语调温和而威严，体现儒者风范。"
+    },
+    "chinese_teacher": {
+      "voice_type": "female",
+      "speaking_style": "表达清晰耐心，循循善诱，语调温和亲切，适合教学。"
+    },
+    "harry_potter": {
+      "voice_type": "male",
+      "speaking_style": "充满活力和好奇心，语调年轻而热情，偶尔带有魔法世界的神秘感。"
+    }
+  }
+}
