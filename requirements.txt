@@ -12,7 +12,7 @@ python-dotenv==1.0.0
 # 语音处理
 SpeechRecognition==3.10.0
 pyttsx3==2.90
-pyaudio==0.2.11
+# pyaudio==0.2.11  # 暂时跳过，需要C++编译工具
 pydub==0.25.1
 
 # 数据处理

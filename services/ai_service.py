@@ -11,14 +11,14 @@ from datetime import datetime
 class AIRoleplayService:
     def __init__(self):
         # 从环境变量获取API配置
-        self.api_key = os.getenv('OPENAI_API_KEY')
-        self.api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        self.model = os.getenv('OPENAI_MODEL', 'gpt-4')
+        self.api_key = os.getenv('ARK_API_KEY') or os.getenv('OPENAI_API_KEY')
+        self.api_base = os.getenv('OPENAI_API_BASE', 'https://ark.cn-beijing.volces.com/api/v3')
+        self.model = os.getenv('OPENAI_MODEL', 'doubao-seed-1-6-250615')
         
         if not self.api_key:
-            raise ValueError("请设置OPENAI_API_KEY环境变量")
+            raise ValueError("请设置ARK_API_KEY或OPENAI_API_KEY环境变量")
         
-        # 初始化OpenAI客户端
+        # 初始化OpenAI客户端（兼容豆包API）
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.api_base
