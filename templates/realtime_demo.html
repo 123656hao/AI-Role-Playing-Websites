@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时语音对话演示 - AI角色扮演</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .demo-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .status-panel {
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .chat-area {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .message.user .message-avatar {
+            background: #764ba2;
+        }
+        
+        .message-content {
+            background: white;
+            padding: 1rem;
+            border-radius: 15px;
+            max-width: 70%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        
+        .controls-panel {
+            padding: 1.5rem;
+            background: white;
+        }
+        
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        
+        .control-btn {
+            margin: 0.25rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success-custom {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger-custom {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-warning-custom {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .recording {
+            animation: pulse 1s infinite;
+            background: #dc3545 !important;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .input-group-custom {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .text-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            outline: none;
+        }
+        
+        .text-input:focus {
+            border-color: #667eea;
+        }
+        
+        .log-area {
+            height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.25rem;
+            padding: 0.25rem;
+            border-radius: 3px;
+        }
+        
+        .log-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .log-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .log-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .log-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <!-- 头部 -->
+        <div class="demo-header">
+            <h1><i class="fas fa-microphone"></i> 实时语音对话演示</h1>
+            <p>测试AI角色扮演的实时语音交互功能</p>
+        </div>
+        
+        <!-- 状态面板 -->
+        <div class="status-panel">
+            <h5>系统状态</h5>
+            <div class="status-item">
+                <span>WebSocket连接</span>
+                <span class="status-badge status-error" id="wsStatus">未连接</span>
+            </div>
+            <div class="status-item">
+                <span>语音会话</span>
+                <span class="status-badge status-error" id="voiceStatus">未启动</span>
+            </div>
+            <div class="status-item">
+                <span>当前角色</span>
+                <span class="status-badge status-warning" id="characterStatus">未选择</span>
+            </div>
+            <div class="status-item">
+                <span>录音状态</span>
+                <span class="status-badge status-error" id="recordStatus">未录音</span>
+            </div>
+        </div>
+        
+        <!-- 聊天区域 -->
+        <div class="chat-area" id="chatArea">
+            <div class="text-center text-muted">
+                <i class="fas fa-comments fa-3x mb-3"></i>
+                <p>选择角色并启动语音会话开始对话</p>
+            </div>
+        </div>
+        
+        <!-- 控制面板 -->
+        <div class="controls-panel">
+            <!-- 角色选择 -->
+            <div class="control-group">
+                <h6>选择角色</h6>
+                <select class="form-select" id="characterSelect">
+                    <option value="">请选择角色...</option>
+                </select>
+            </div>
+            
+            <!-- 连接控制 -->
+            <div class="control-group">
+                <h6>连接控制</h6>
+                <button class="control-btn btn-primary-custom" id="connectBtn" onclick="toggleConnection()">
+                    <i class="fas fa-plug"></i> 连接WebSocket
+                </button>
+                <button class="control-btn btn-success-custom" id="startSessionBtn" onclick="startVoiceSession()" disabled>
+                    <i class="fas fa-play"></i> 启动语音会话
+                </button>
+                <button class="control-btn btn-danger-custom" id="stopSessionBtn" onclick="stopVoiceSession()" disabled>
+                    <i class="fas fa-stop"></i> 停止会话
+                </button>
+            </div>
+            
+            <!-- 语音控制 -->
+            <div class="control-group">
+                <h6>语音控制</h6>
+                <button class="control-btn btn-warning-custom" id="recordBtn" onclick="toggleRecording()" disabled>
+                    <i class="fas fa-microphone"></i> 开始录音
+                </button>
+                <button class="control-btn btn-primary-custom" onclick="clearChat()">
+                    <i class="fas fa-trash"></i> 清空对话
+                </button>
+            </div>
+            
+            <!-- 文字输入 -->
+            <div class="control-group">
+                <h6>文字输入</h6>
+                <div class="input-group-custom">
+                    <input type="text" class="text-input" id="textInput" placeholder="输入文字消息..." disabled>
+                    <button class="control-btn btn-primary-custom" onclick="sendTextMessage()" disabled>
+                        <i class="fas fa-paper-plane"></i> 发送
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 日志区域 -->
+        <div class="controls-panel">
+            <h6>系统日志</h6>
+            <div class="log-area" id="logArea"></div>
+            <button class="control-btn btn-primary-custom mt-2" onclick="clearLog()">
+                <i class="fas fa-broom"></i> 清空日志
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let websocket = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let characters = [];
+        let currentCharacter = null;
+        let sessionActive = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCharacters();
+            addLog('系统初始化完成', 'info');
+        });
+
+        // 加载角色列表
+        async function loadCharacters() {
+            try {
+                const response = await fetch('/api/characters');
+                const data = await response.json();
+                
+                if (data.success) {
+                    characters = data.characters;
+                    const select = document.getElementById('characterSelect');
+                    
+                    characters.forEach(character => {
+                        const option = document.createElement('option');
+                        option.value = character.id;
+                        option.textContent = character.name;
+                        select.appendChild(option);
+                    });
+                    
+                    addLog(`加载了 ${characters.length} 个角色`, 'success');
+                } else {
+                    addLog('加载角色失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                addLog('加载角色异常: ' + error.message, 'error');
+            }
+        }
+
+        // 角色选择变化
+        document.getElementById('characterSelect').addEventListener('change', function() {
+            const characterId = this.value;
+            if (characterId) {
+                currentCharacter = characters.find(c => c.id === characterId);
+                updateStatus('characterStatus', currentCharacter.name, 'success');
+                addLog(`选择角色: ${currentCharacter.name}`, 'info');
+            } else {
+                currentCharacter = null;
+                updateStatus('characterStatus', '未选择', 'warning');
+            }
+        });
+
+        // 切换WebSocket连接
+        async function toggleConnection() {
+            if (!websocket) {
+                await connectWebSocket();
+            } else {
+                disconnectWebSocket();
+            }
+        }
+
+        // 连接WebSocket
+        async function connectWebSocket() {
+            try {
+                addLog('正在连接WebSocket...', 'info');
+                
+                websocket = new WebSocket('ws://localhost:8765');
+                
+                websocket.onopen = function() {
+                    addLog('WebSocket连接成功', 'success');
+                    updateStatus('wsStatus', '已连接', 'success');
+                    
+                    document.getElementById('connectBtn').innerHTML = '<i class="fas fa-unlink"></i> 断开连接';
+                    document.getElementById('startSessionBtn').disabled = false;
+                };
+                
+                websocket.onmessage = function(event) {
+                    handleWebSocketMessage(JSON.parse(event.data));
+                };
+                
+                websocket.onclose = function() {
+                    addLog('WebSocket连接关闭', 'warning');
+                    updateStatus('wsStatus', '未连接', 'error');
+                    updateStatus('voiceStatus', '未启动', 'error');
+                    
+                    websocket = null;
+                    sessionActive = false;
+                    
+                    document.getElementById('connectBtn').innerHTML = '<i class="fas fa-plug"></i> 连接WebSocket';
+                    document.getElementById('startSessionBtn').disabled = true;
+                    document.getElementById('stopSessionBtn').disabled = true;
+                    document.getElementById('recordBtn').disabled = true;
+                    document.getElementById('textInput').disabled = true;
+                };
+                
+                websocket.onerror = function(error) {
+                    addLog('WebSocket错误: ' + error, 'error');
+                };
+                
+            } catch (error) {
+                addLog('连接WebSocket失败: ' + error.message, 'error');
+            }
+        }
+
+        // 断开WebSocket
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.close();
+            }
+        }
+
+        // 处理WebSocket消息
+        function handleWebSocketMessage(message) {
+            addLog(`收到消息: ${message.type}`, 'info');
+            
+            switch (message.type) {
+                case 'connection_established':
+                    addLog(`连接ID: ${message.connection_id}`, 'info');
+                    break;
+                    
+                case 'voice_session_started':
+                    addLog('语音会话已启动', 'success');
+                    updateStatus('voiceStatus', '已启动', 'success');
+                    sessionActive = true;
+                    
+                    document.getElementById('startSessionBtn').disabled = true;
+                    document.getElementById('stopSessionBtn').disabled = false;
+                    document.getElementById('recordBtn').disabled = false;
+                    document.getElementById('textInput').disabled = false;
+                    break;
+                    
+                case 'voice_session_stopped':
+                    addLog('语音会话已停止', 'warning');
+                    updateStatus('voiceStatus', '未启动', 'error');
+                    sessionActive = false;
+                    
+                    document.getElementById('startSessionBtn').disabled = false;
+                    document.getElementById('stopSessionBtn').disabled = true;
+                    document.getElementById('recordBtn').disabled = true;
+                    document.getElementById('textInput').disabled = true;
+                    break;
+                    
+                case 'ai_text_response':
+                    addMessage(message.text, 'assistant', message.character);
+                    break;
+                    
+                case 'ai_voice_response':
+                    addMessage(message.text, 'assistant', message.character);
+                    if (message.audio_url) {
+                        playAudio(message.audio_url);
+                    }
+                    break;
+                    
+                case 'audio_processed':
+                    addLog('音频处理完成', 'success');
+                    break;
+                    
+                case 'error':
+                    addLog('服务器错误: ' + message.message, 'error');
+                    break;
+                    
+                default:
+                    addLog(`未处理的消息类型: ${message.type}`, 'warning');
+            }
+        }
+
+        // 启动语音会话
+        function startVoiceSession() {
+            if (!currentCharacter) {
+                addLog('请先选择角色', 'error');
+                return;
+            }
+            
+            if (!websocket) {
+                addLog('请先连接WebSocket', 'error');
+                return;
+            }
+            
+            const message = {
+                type: 'start_voice_session',
+                character_id: currentCharacter.id,
+                config: {}
+            };
+            
+            websocket.send(JSON.stringify(message));
+            addLog(`启动语音会话: ${currentCharacter.name}`, 'info');
+        }
+
+        // 停止语音会话
+        function stopVoiceSession() {
+            if (websocket && sessionActive) {
+                const message = {
+                    type: 'stop_voice_session'
+                };
+                
+                websocket.send(JSON.stringify(message));
+                addLog('停止语音会话', 'info');
+            }
+        }
+
+        // 切换录音
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        }
+
+        // 开始录音
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1
+                    } 
+                });
+                
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    sendAudioData(audioBlob);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                updateStatus('recordStatus', '录音中', 'success');
+                document.getElementById('recordBtn').innerHTML = '<i class="fas fa-stop"></i> 停止录音';
+                document.getElementById('recordBtn').classList.add('recording');
+                
+                addLog('开始录音', 'info');
+                
+            } catch (error) {
+                addLog('录音失败: ' + error.message, 'error');
+            }
+        }
+
+        // 停止录音
+        async function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                
+                isRecording = false;
+                updateStatus('recordStatus', '未录音', 'error');
+                document.getElementById('recordBtn').innerHTML = '<i class="fas fa-microphone"></i> 开始录音';
+                document.getElementById('recordBtn').classList.remove('recording');
+                
+                addLog('停止录音', 'info');
+            }
+        }
+
+        // 发送音频数据
+        async function sendAudioData(audioBlob) {
+            try {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const arrayBuffer = reader.result;
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                    
+                    if (websocket && sessionActive) {
+                        const message = {
+                            type: 'audio_data',
+                            audio_data: base64
+                        };
+                        
+                        websocket.send(JSON.stringify(message));
+                        addLog('发送音频数据', 'info');
+                    }
+                };
+                reader.readAsArrayBuffer(audioBlob);
+                
+            } catch (error) {
+                addLog('发送音频失败: ' + error.message, 'error');
+            }
+        }
+
+        // 发送文字消息
+        function sendTextMessage() {
+            const input = document.getElementById('textInput');
+            const message = input.value.trim();
+            
+            if (!message) {
+                addLog('消息不能为空', 'error');
+                return;
+            }
+            
+            if (!websocket || !sessionActive) {
+                addLog('请先启动语音会话', 'error');
+                return;
+            }
+            
+            const wsMessage = {
+                type: 'text_message',
+                message: message
+            };
+            
+            websocket.send(JSON.stringify(wsMessage));
+            addMessage(message, 'user');
+            input.value = '';
+            
+            addLog('发送文字消息: ' + message, 'info');
+        }
+
+        // 添加消息到聊天区域
+        function addMessage(content, sender, characterName = null) {
+            const chatArea = document.getElementById('chatArea');
+            
+            // 如果是第一条消息，清空提示文字
+            if (chatArea.children.length === 1 && chatArea.children[0].classList.contains('text-center')) {
+                chatArea.innerHTML = '';
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = sender === 'user' ? '👤' : '🤖';
+            const name = sender === 'user' ? '你' : (characterName || '助手');
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <small class="text-muted">${name}</small>
+                    <div>${content}</div>
+                </div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // 播放音频
+        function playAudio(audioUrl) {
+            try {
+                const audio = new Audio(audioUrl);
+                audio.play().then(() => {
+                    addLog('播放语音回复', 'success');
+                }).catch(error => {
+                    addLog('播放音频失败: ' + error.message, 'error');
+                });
+            } catch (error) {
+                addLog('创建音频失败: ' + error.message, 'error');
+            }
+        }
+
+        // 清空对话
+        function clearChat() {
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-comments fa-3x mb-3"></i>
+                    <p>对话已清空</p>
+                </div>
+            `;
+            addLog('清空对话', 'info');
+        }
+
+        // 更新状态
+        function updateStatus(elementId, text, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = `status-badge status-${type}`;
+        }
+
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const logArea = document.getElementById('logArea');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // 清空日志
+        function clearLog() {
+            document.getElementById('logArea').innerHTML = '';
+            addLog('日志已清空', 'info');
+        }
+
+        // 回车发送消息
+        document.getElementById('textInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendTextMessage();
+            }
+        });
+    </script>
+</body>
+</html>

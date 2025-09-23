@@ -2,47 +2,54 @@
 
 ## 项目概述
 
-这是一个基于Flask和AI的角色扮演聊天网站，支持与历史名人和虚拟角色进行智能对话，集成了语音识别和语音合成功能。
+这是一个基于Flask和AI的角色扮演聊天网站，支持与历史名人和虚拟角色进行智能对话，集成了完整的实时语音交互功能。
 
-**备份时间**: 2025年9月22日 (星期一)
+**备份时间**: 2025年9月23日 (星期二)
+**版本**: v2.0 - 实时语音交互版
 
 ## 🏗️ 项目结构
 
 ```
 AI-Role-Playing-Websites/
-├── app.py                      # Flask主应用 (已配置)
-├── requirements.txt            # Python依赖 (已配置)
-├── .env.example               # 环境变量示例 (已配置)
-├── .env                       # 实际环境变量 (需要配置)
+├── app.py                      # Flask主应用 (✅ 已配置WebSocket支持)
+├── requirements.txt            # Python依赖 (✅ 已添加websockets)
+├── .env.example               # 环境变量示例 (✅ 已配置)
+├── .env                       # 实际环境变量 (✅ 已配置豆包API)
 ├── .gitignore                 # Git忽略文件
 ├── LICENSE                    # MIT许可证
 ├── README.md                  # 项目说明文档
+├── REALTIME_VOICE_FEATURES.md # 实时语音功能说明 (🆕 新增)
 ├── GIT_SETUP_GUIDE.md         # Git设置指南
+├── QUICK_START_GUIDE.md       # 快速启动指南
 ├── setup_git.bat              # Windows Git设置脚本
 ├── setup_git.ps1              # PowerShell Git设置脚本
-├── start.bat                  # Windows启动脚本
-├── start.sh                   # Linux/Mac启动脚本
+├── restore_environment.bat    # 环境恢复脚本
+├── restore_environment.ps1    # PowerShell环境恢复脚本
+├── check_config.py            # 配置检查脚本
+├── test_api.py                # API测试脚本
+├── debug_api.py               # API调试脚本
 ├── config/
-│   └── voice_settings.json   # 语音配置 (已配置API密钥)
+│   └── voice_settings.json   # 语音配置 (✅ 已配置字节跳动API)
 ├── services/
-│   ├── ai_service.py         # AI对话服务
-│   ├── voice_service.py      # 语音处理服务
+│   ├── ai_service.py         # AI对话服务 (✅ 已配置豆包API)
+│   ├── voice_service.py      # 基础语音处理服务
+│   ├── enhanced_voice_service.py # 增强语音服务 (🆕 新增)
+│   ├── websocket_handler.py  # WebSocket处理器 (🆕 新增)
 │   ├── voice_config_service.py # 语音配置服务
 │   ├── voice_chat_client.py  # 语音聊天客户端
 │   └── character_service.py  # 角色管理服务
 ├── templates/
-│   └── index.html            # 主页模板
+│   ├── index.html            # 主页模板 (✅ 已完善)
+│   └── realtime_demo.html    # 实时语音演示页面 (🆕 新增)
 ├── static/
 │   ├── js/
-│   │   └── app.js           # 前端JavaScript
+│   │   └── app.js           # 前端JavaScript (✅ 已添加实时语音功能)
 │   ├── css/                 # 样式文件
 │   ├── images/              # 图片资源
 │   └── audio/               # 音频文件
 ├── data/
-│   └── characters.json      # 角色数据 (6个角色已配置)
+│   └── characters.json      # 角色数据 (✅ 6个角色已配置)
 ├── examples/                # 使用示例
-│   ├── complete_voice_chat.py
-│   └── voice_chat_example.py
 ├── logs/                    # 日志文件目录
 └── __pycache__/            # Python缓存
 ```
@@ -58,22 +65,28 @@ AI-Role-Playing-Websites/
 ```
 Flask==2.3.3
 Flask-CORS==4.0.0
-openai==1.3.0
+openai==1.108.2              # ✅ 已升级到最新版本
 python-dotenv==1.0.0
 SpeechRecognition==3.10.0
 pyttsx3==2.90
-pyaudio==0.2.11
+# pyaudio==0.2.11           # ⚠️ 暂时跳过，需要C++编译工具
+pydub==0.25.1
 requests==2.31.0
+websockets==15.0.1           # 🆕 新增WebSocket支持
+python-decouple==3.8
 ```
 
 ### API配置状态
 
 #### AI服务配置 (.env)
 ```env
-# 需要配置的环境变量
+# Flask应用配置
 SECRET_KEY=ai-roleplay-secret-2024
 FLASK_ENV=development
-OPENAI_API_KEY=your_doubao_api_key_here  # 需要填入真实密钥
+
+# OpenAI API配置（豆包）
+ARK_API_KEY=44ae44d0-4db0-461f-be8b-b1989ecd3e8a     # ✅ 已配置真实密钥
+OPENAI_API_KEY=44ae44d0-4db0-461f-be8b-b1989ecd3e8a   # ✅ 已配置真实密钥
 OPENAI_API_BASE=https://ark.cn-beijing.volces.com/api/v3
 OPENAI_MODEL=doubao-seed-1-6-250615
 ```

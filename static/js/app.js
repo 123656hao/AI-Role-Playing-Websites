@@ -119,6 +119,14 @@ class AIRoleplayApp {
             }
         });
 
+        // 技能执行按钮
+        const executeSkillBtn = document.getElementById('executeSkillBtn');
+        if (executeSkillBtn) {
+            executeSkillBtn.addEventListener('click', () => {
+                this.executeSkill();
+            });
+        }
+
         console.log('✅ 事件监听器绑定完成');
     }
 
@@ -582,30 +590,654 @@ class AIRoleplayApp {
         });
     }
 
-    // 语音相关功能（简化版）
+    // 语音相关功能
     setupVoiceRecording() {
         console.log('🎤 设置语音录制功能...');
-        // 简化的语音功能，避免复杂的错误
+        
+        // 检查浏览器支持
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.warn('⚠️ 浏览器不支持语音录制');
+            return;
+        }
+        
+        // 初始化语音录制相关变量
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.websocket = null;
+        this.realtimeMode = false;
+        
+        console.log('✅ 语音录制功能初始化完成');
     }
 
-    toggleVoiceRecording() {
+    async toggleVoiceRecording() {
         console.log('🎤 切换语音录制状态');
-        this.showError('语音功能暂时不可用，请使用文字输入');
+        
+        if (!this.isRecording) {
+            await this.startRecording();
+        } else {
+            await this.stopRecording();
+        }
+    }
+
+    async startRecording() {
+        try {
+            console.log('🎤 开始录音...');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                } 
+            });
+            
+            this.mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            this.audioChunks = [];
+            
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+            
+            this.mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                await this.processRecordedAudio(audioBlob);
+            };
+            
+            this.mediaRecorder.start();
+            this.isRecording = true;
+            
+            // 更新UI
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
+            }
+            
+            console.log('✅ 录音已开始');
+            
+        } catch (error) {
+            console.error('❌ 开始录音失败:', error);
+            this.showError('无法访问麦克风，请检查权限设置');
+        }
+    }
+
+    async stopRecording() {
+        if (this.mediaRecorder && this.isRecording) {
+            console.log('🛑 停止录音...');
+            
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            
+            // 停止所有音频轨道
+            if (this.mediaRecorder.stream) {
+                this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+            
+            // 更新UI
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            }
+            
+            console.log('✅ 录音已停止');
+        }
+    }
+
+    async processRecordedAudio(audioBlob) {
+        try {
+            console.log('🎵 处理录音数据...');
+            
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            
+            // 发送到服务器进行语音识别
+            const response = await fetch('/api/voice/enhanced/recognize', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.text) {
+                // 将识别的文字填入输入框
+                const messageInput = document.getElementById('messageInput');
+                if (messageInput) {
+                    messageInput.value = data.text;
+                    console.log('✅ 语音识别成功:', data.text);
+                }
+            } else {
+                this.showError(data.error || '语音识别失败');
+            }
+            
+        } catch (error) {
+            console.error('❌ 处理录音失败:', error);
+            this.showError('语音处理失败: ' + error.message);
+        }
     }
 
     async loadVoiceConfig(characterId) {
         console.log('🔊 加载语音配置:', characterId);
-        // 简化的语音配置加载
+        
+        try {
+            const response = await fetch(`/api/voice/config/${characterId}?voice_type=auto`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.voiceConfig = data.config;
+                console.log('✅ 语音配置加载成功');
+                
+                // 添加实时语音按钮
+                this.addRealtimeVoiceButton();
+            }
+            
+        } catch (error) {
+            console.error('❌ 加载语音配置失败:', error);
+        }
+    }
+
+    addRealtimeVoiceButton() {
+        const skillsSection = document.getElementById('skillsSection');
+        if (skillsSection && !document.getElementById('realtimeVoiceBtn')) {
+            const realtimeBtn = document.createElement('button');
+            realtimeBtn.id = 'realtimeVoiceBtn';
+            realtimeBtn.className = 'skill-btn';
+            realtimeBtn.innerHTML = '🎙️ 实时语音对话';
+            realtimeBtn.onclick = () => this.toggleRealtimeVoice();
+            
+            skillsSection.appendChild(realtimeBtn);
+        }
+    }
+
+    async toggleRealtimeVoice() {
+        if (!this.realtimeMode) {
+            await this.startRealtimeVoice();
+        } else {
+            await this.stopRealtimeVoice();
+        }
+    }
+
+    async startRealtimeVoice() {
+        try {
+            console.log('🌐 启动实时语音对话...');
+            
+            if (!this.currentCharacter) {
+                this.showError('请先选择一个角色');
+                return;
+            }
+            
+            // 获取实时语音配置
+            const response = await fetch('/api/realtime/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    character_id: this.currentCharacter.id
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                this.showError(data.error || '启动实时语音失败');
+                return;
+            }
+            
+            // 连接WebSocket
+            await this.connectWebSocket(data.websocket_url);
+            
+            this.realtimeMode = true;
+            this.updateRealtimeVoiceButton(true);
+            
+            console.log('✅ 实时语音对话已启动');
+            
+        } catch (error) {
+            console.error('❌ 启动实时语音失败:', error);
+            this.showError('启动实时语音失败: ' + error.message);
+        }
+    }
+
+    async connectWebSocket(url) {
+        return new Promise((resolve, reject) => {
+            try {
+                this.websocket = new WebSocket(url);
+                
+                this.websocket.onopen = () => {
+                    console.log('🔌 WebSocket连接成功');
+                    
+                    // 发送开始会话消息
+                    this.websocket.send(JSON.stringify({
+                        type: 'start_voice_session',
+                        character_id: this.currentCharacter.id,
+                        config: this.voiceConfig || {}
+                    }));
+                    
+                    resolve();
+                };
+                
+                this.websocket.onmessage = (event) => {
+                    this.handleWebSocketMessage(JSON.parse(event.data));
+                };
+                
+                this.websocket.onclose = () => {
+                    console.log('🔌 WebSocket连接关闭');
+                    this.realtimeMode = false;
+                    this.updateRealtimeVoiceButton(false);
+                };
+                
+                this.websocket.onerror = (error) => {
+                    console.error('❌ WebSocket错误:', error);
+                    reject(error);
+                };
+                
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    handleWebSocketMessage(message) {
+        console.log('📨 收到WebSocket消息:', message.type);
+        
+        switch (message.type) {
+            case 'voice_session_started':
+                console.log('✅ 语音会话已开始');
+                break;
+                
+            case 'ai_text_response':
+                this.addMessage(message.text, 'assistant');
+                break;
+                
+            case 'ai_voice_response':
+                this.addMessage(message.text, 'assistant');
+                if (message.audio_url) {
+                    this.playAudioUrl(message.audio_url);
+                }
+                break;
+                
+            case 'error':
+                console.error('❌ WebSocket错误:', message.message);
+                this.showError('语音服务错误: ' + message.message);
+                break;
+                
+            default:
+                console.log('ℹ️ 未处理的消息类型:', message.type);
+        }
+    }
+
+    async stopRealtimeVoice() {
+        try {
+            console.log('🛑 停止实时语音对话...');
+            
+            if (this.websocket) {
+                this.websocket.send(JSON.stringify({
+                    type: 'stop_voice_session'
+                }));
+                
+                this.websocket.close();
+                this.websocket = null;
+            }
+            
+            this.realtimeMode = false;
+            this.updateRealtimeVoiceButton(false);
+            
+            console.log('✅ 实时语音对话已停止');
+            
+        } catch (error) {
+            console.error('❌ 停止实时语音失败:', error);
+        }
+    }
+
+    updateRealtimeVoiceButton(active) {
+        const btn = document.getElementById('realtimeVoiceBtn');
+        if (btn) {
+            if (active) {
+                btn.innerHTML = '🛑 停止实时对话';
+                btn.style.backgroundColor = '#e53e3e';
+            } else {
+                btn.innerHTML = '🎙️ 实时语音对话';
+                btn.style.backgroundColor = '';
+            }
+        }
     }
 
     async playVoice(text) {
         console.log('🔊 播放语音:', text.substring(0, 50) + '...');
-        // 简化的语音播放
+        
+        try {
+            const response = await fetch('/api/voice/enhanced/synthesize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text,
+                    character_id: this.currentCharacter?.id
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.audio_url) {
+                this.playAudioUrl(data.audio_url);
+            }
+            
+        } catch (error) {
+            console.error('❌ 语音播放失败:', error);
+        }
+    }
+
+    playAudioUrl(audioUrl) {
+        try {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(error => {
+                console.error('❌ 音频播放失败:', error);
+            });
+        } catch (error) {
+            console.error('❌ 创建音频对象失败:', error);
+        }
     }
 
     showSkillModal(skillName) {
         console.log('🛠️ 显示技能模态框:', skillName);
-        this.showError('技能功能开发中，敬请期待');
+        
+        if (!this.currentCharacter) {
+            this.showError('请先选择一个角色');
+            return;
+        }
+        
+        const skillModal = document.getElementById('skillModal');
+        const skillModalTitle = document.getElementById('skillModalTitle');
+        const skillModalBody = document.getElementById('skillModalBody');
+        
+        // 设置技能标题和内容
+        const skillInfo = this.getSkillInfo(skillName);
+        skillModalTitle.textContent = skillInfo.title;
+        skillModalBody.innerHTML = skillInfo.content;
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(skillModal);
+        modal.show();
+        
+        // 保存当前技能
+        this.currentSkill = skillName;
+    }
+
+    getSkillInfo(skillName) {
+        const skillMap = {
+            'knowledge_qa': {
+                title: '知识问答',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">请输入您的问题：</label>
+                        <textarea class="form-control" id="skillQuestion" rows="3" placeholder="例如：什么是相对论？"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">问题类型：</label>
+                        <select class="form-select" id="skillQuestionType">
+                            <option value="general">一般问题</option>
+                            <option value="academic">学术问题</option>
+                            <option value="practical">实用问题</option>
+                            <option value="philosophical">哲学问题</option>
+                        </select>
+                    </div>
+                `
+            },
+            'emotional_support': {
+                title: '情感陪伴',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">您当前的情绪状态：</label>
+                        <select class="form-select" id="skillEmotion">
+                            <option value="happy">开心</option>
+                            <option value="sad">难过</option>
+                            <option value="anxious">焦虑</option>
+                            <option value="confused">困惑</option>
+                            <option value="angry">愤怒</option>
+                            <option value="lonely">孤独</option>
+                            <option value="stressed">压力大</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">请描述您的情况：</label>
+                        <textarea class="form-control" id="skillEmotionMessage" rows="4" placeholder="告诉我发生了什么，我会陪伴您..."></textarea>
+                    </div>
+                `
+            },
+            'teaching_guidance': {
+                title: '教学指导',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">学习主题：</label>
+                        <input type="text" class="form-control" id="skillTopic" placeholder="例如：量子物理、古典文学、编程基础">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">您的水平：</label>
+                        <select class="form-select" id="skillLevel">
+                            <option value="beginner">初学者</option>
+                            <option value="intermediate">中级</option>
+                            <option value="advanced">高级</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">学习目标：</label>
+                        <textarea class="form-control" id="skillGoal" rows="2" placeholder="您希望通过学习达到什么目标？"></textarea>
+                    </div>
+                `
+            },
+            'creative_writing': {
+                title: '创作协助',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">创作类型：</label>
+                        <select class="form-select" id="skillWritingType">
+                            <option value="story">故事</option>
+                            <option value="poem">诗歌</option>
+                            <option value="essay">散文</option>
+                            <option value="dialogue">对话</option>
+                            <option value="script">剧本</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">创作主题：</label>
+                        <input type="text" class="form-control" id="skillTheme" placeholder="例如：友谊、冒险、爱情、科幻">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">风格要求：</label>
+                        <input type="text" class="form-control" id="skillStyle" placeholder="例如：幽默、悲伤、神秘、浪漫">
+                    </div>
+                `
+            },
+            'language_practice': {
+                title: '语言练习',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">目标语言：</label>
+                        <select class="form-select" id="skillLanguage">
+                            <option value="Chinese">中文</option>
+                            <option value="English">英语</option>
+                            <option value="Japanese">日语</option>
+                            <option value="Korean">韩语</option>
+                            <option value="French">法语</option>
+                            <option value="German">德语</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">练习类型：</label>
+                        <select class="form-select" id="skillPracticeType">
+                            <option value="conversation">对话练习</option>
+                            <option value="grammar">语法练习</option>
+                            <option value="vocabulary">词汇练习</option>
+                            <option value="pronunciation">发音练习</option>
+                            <option value="writing">写作练习</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">练习话题：</label>
+                        <input type="text" class="form-control" id="skillPracticeTopic" placeholder="例如：日常生活、工作、旅行、学习">
+                    </div>
+                `
+            }
+        };
+        
+        return skillMap[skillName] || {
+            title: '未知技能',
+            content: '<p>技能信息不存在</p>'
+        };
+    }
+
+    async executeSkill() {
+        if (!this.currentSkill || !this.currentCharacter) {
+            this.showError('技能执行失败：缺少必要信息');
+            return;
+        }
+        
+        try {
+            // 收集技能参数
+            const skillData = this.collectSkillData(this.currentSkill);
+            
+            if (!skillData) {
+                this.showError('请填写完整的技能参数');
+                return;
+            }
+            
+            // 发送技能执行请求
+            const response = await fetch(`/api/skills/${this.currentSkill}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(skillData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 关闭技能模态框
+                const skillModal = bootstrap.Modal.getInstance(document.getElementById('skillModal'));
+                skillModal.hide();
+                
+                // 显示技能执行结果
+                this.displaySkillResult(data.result);
+            } else {
+                this.showError('技能执行失败: ' + data.error);
+            }
+            
+        } catch (error) {
+            console.error('❌ 技能执行失败:', error);
+            this.showError('技能执行失败: ' + error.message);
+        }
+    }
+
+    collectSkillData(skillName) {
+        const skillDataMap = {
+            'knowledge_qa': () => {
+                const question = document.getElementById('skillQuestion')?.value?.trim();
+                const questionType = document.getElementById('skillQuestionType')?.value;
+                
+                if (!question) return null;
+                
+                return {
+                    question: question,
+                    type: questionType
+                };
+            },
+            'emotional_support': () => {
+                const emotion = document.getElementById('skillEmotion')?.value;
+                const message = document.getElementById('skillEmotionMessage')?.value?.trim();
+                
+                if (!message) return null;
+                
+                return {
+                    emotion: emotion,
+                    message: message
+                };
+            },
+            'teaching_guidance': () => {
+                const topic = document.getElementById('skillTopic')?.value?.trim();
+                const level = document.getElementById('skillLevel')?.value;
+                const goal = document.getElementById('skillGoal')?.value?.trim();
+                
+                if (!topic) return null;
+                
+                return {
+                    topic: topic,
+                    level: level,
+                    goal: goal
+                };
+            },
+            'creative_writing': () => {
+                const type = document.getElementById('skillWritingType')?.value;
+                const theme = document.getElementById('skillTheme')?.value?.trim();
+                const style = document.getElementById('skillStyle')?.value?.trim();
+                
+                if (!theme) return null;
+                
+                return {
+                    type: type,
+                    theme: theme,
+                    style: style
+                };
+            },
+            'language_practice': () => {
+                const language = document.getElementById('skillLanguage')?.value;
+                const practiceType = document.getElementById('skillPracticeType')?.value;
+                const topic = document.getElementById('skillPracticeTopic')?.value?.trim();
+                
+                if (!topic) return null;
+                
+                return {
+                    language: language,
+                    type: practiceType,
+                    topic: topic
+                };
+            }
+        };
+        
+        const collector = skillDataMap[skillName];
+        return collector ? collector() : null;
+    }
+
+    displaySkillResult(result) {
+        // 根据技能类型显示不同的结果
+        let message = '';
+        
+        switch (result.skill) {
+            case 'knowledge_qa':
+                message = `📚 ${result.character}的回答：\n\n${result.answer}`;
+                break;
+            case 'emotional_support':
+                message = `💝 ${result.character}的安慰：\n\n${result.support_message}`;
+                break;
+            case 'teaching_guidance':
+                message = `👨‍🏫 ${result.character}的教学：\n\n${result.lesson}`;
+                break;
+            case 'creative_writing':
+                message = `✍️ ${result.character}的创作：\n\n${result.creation}`;
+                break;
+            case 'language_practice':
+                message = `🗣️ ${result.character}的语言指导：\n\n${result.practice_content}`;
+                break;
+            default:
+                message = `🤖 ${result.character || '助手'}：\n\n${JSON.stringify(result, null, 2)}`;
+        }
+        
+        // 添加到聊天界面
+        this.addMessage(message, 'assistant');
+        
+        // 自动播放语音（如果有语音配置）
+        if (this.voiceConfig) {
+            this.playVoice(message);
+        }
     }
 }
 
