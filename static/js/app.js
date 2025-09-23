@@ -42,6 +42,39 @@ class AIRoleplayApp {
             searchInput.addEventListener('input', (e) => {
                 this.searchCharacters(e.target.value);
             });
+            
+            // 点击外部隐藏搜索建议
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) {
+                    this.hideSearchSuggestions();
+                }
+            });
+            
+            // 键盘导航支持
+            searchInput.addEventListener('keydown', (e) => {
+                const suggestions = document.getElementById('searchSuggestions');
+                if (!suggestions || suggestions.style.display === 'none') return;
+                
+                const items = suggestions.querySelectorAll('.suggestion-item');
+                let activeIndex = Array.from(items).findIndex(item => item.classList.contains('active'));
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    items.forEach(item => item.classList.remove('active'));
+                    activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+                    items[activeIndex]?.classList.add('active');
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    items.forEach(item => item.classList.remove('active'));
+                    activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+                    items[activeIndex]?.classList.add('active');
+                } else if (e.key === 'Enter' && activeIndex >= 0) {
+                    e.preventDefault();
+                    items[activeIndex]?.click();
+                } else if (e.key === 'Escape') {
+                    this.hideSearchSuggestions();
+                }
+            });
         }
 
         // 分类筛选
@@ -147,9 +180,10 @@ class AIRoleplayApp {
 
         if (!characters || characters.length === 0) {
             grid.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #718096;">
-                    <h3>🤔 没有找到角色</h3>
-                    <p>请检查搜索条件或稍后重试</p>
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">🤔</div>
+                    <h3>暂无匹配的角色</h3>
+                    <p>请尝试调整搜索条件或切换分类筛选</p>
                 </div>
             `;
             return;
@@ -179,20 +213,46 @@ class AIRoleplayApp {
         const tags = character.tags || [];
         const id = character.id || 'unknown';
         
+        // 简化描述为一行
+        const shortDescription = this.getShortDescription(background);
+        
         card.innerHTML = `
-            <div class="character-avatar">${this.getCharacterEmoji(category)}</div>
-            <div class="character-name">${name}</div>
-            <div class="character-category">${this.getCategoryName(category)}</div>
-            <div class="character-description">${background.substring(0, 100)}...</div>
-            <div class="character-tags">
-                ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            <div class="character-header">
+                <div class="character-avatar">${this.getCharacterEmoji(category)}</div>
+                <div class="character-info">
+                    <h3 style="text-align: center !important; display: flex; justify-content: center; align-items: center; margin: 0 auto;">${name}</h3>
+                    <div class="character-category" style="text-align: center !important; display: flex; justify-content: center; align-items: center;">${this.getCategoryName(category)}</div>
+                </div>
             </div>
-            <button class="chat-btn" onclick="window.app.startChat('${id}')">
-                <i class="fas fa-comments me-2"></i>开始对话
-            </button>
+            <div class="character-description" style="text-align: center !important;">${shortDescription}</div>
+            <div class="character-tags" style="justify-content: center !important; display: flex; align-items: center;">
+                ${tags.slice(0, 4).map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+            <div class="character-actions">
+                <button class="chat-btn" onclick="event.stopPropagation(); window.app.startChat('${id}')">
+                    <i class="fas fa-comments"></i> 开始对话
+                </button>
+            </div>
         `;
         
+        // 添加卡片点击事件来显示角色详情
+        card.addEventListener('click', (e) => {
+            // 如果点击的是按钮，不触发卡片事件
+            if (e.target.closest('.chat-btn')) {
+                return;
+            }
+            this.showCharacterInfo(id);
+        });
+        
         return card;
+    }
+
+    getShortDescription(background) {
+        // 提取背景介绍的前40个字符作为简短描述
+        if (!background || background.length <= 40) {
+            return background || '暂无介绍';
+        }
+        return background.substring(0, 40) + '...';
     }
 
     getCharacterEmoji(category) {
@@ -218,18 +278,62 @@ class AIRoleplayApp {
     }
 
     searchCharacters(query) {
+        console.log('🔍 搜索角色:', query);
+        
         if (!query.trim()) {
             this.renderCharacters(this.characters);
+            this.hideSearchSuggestions();
             return;
         }
 
         const filtered = this.characters.filter(character => 
-            character.name.includes(query) ||
-            character.background.includes(query) ||
-            character.tags.some(tag => tag.includes(query))
+            character.name.toLowerCase().includes(query.toLowerCase()) ||
+            character.background.toLowerCase().includes(query.toLowerCase()) ||
+            character.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
+            this.getCategoryName(character.category).includes(query)
         );
 
         this.renderCharacters(filtered);
+        this.showSearchSuggestions(query, filtered);
+    }
+
+    showSearchSuggestions(query, filteredCharacters) {
+        const suggestions = document.getElementById('searchSuggestions');
+        if (!suggestions) return;
+        
+        // 显示前5个匹配的角色
+        const topMatches = filteredCharacters.slice(0, 5);
+        
+        if (topMatches.length === 0) {
+            suggestions.style.display = 'none';
+            return;
+        }
+        
+        suggestions.innerHTML = topMatches.map(character => `
+            <div class="suggestion-item" onclick="window.app.selectSuggestion('${character.name}')">
+                <span style="margin-right: 0.5rem;">${this.getCharacterEmoji(character.category)}</span>
+                <strong>${character.name}</strong>
+                <small style="margin-left: 0.5rem; color: var(--text-muted);">${this.getCategoryName(character.category)}</small>
+            </div>
+        `).join('');
+        
+        suggestions.style.display = 'block';
+    }
+
+    hideSearchSuggestions() {
+        const suggestions = document.getElementById('searchSuggestions');
+        if (suggestions) {
+            suggestions.style.display = 'none';
+        }
+    }
+
+    selectSuggestion(characterName) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = characterName;
+            this.searchCharacters(characterName);
+            this.hideSearchSuggestions();
+        }
     }
 
     filterByCategory(category) {
@@ -342,13 +446,27 @@ class AIRoleplayApp {
         messageDiv.className = `message ${sender}`;
 
         const avatar = sender === 'user' ? '👤' : this.getCharacterEmoji(this.currentCharacter?.category);
+        const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         
         messageDiv.innerHTML = `
             <div class="message-avatar">${avatar}</div>
-            <div class="message-content">${content}</div>
+            <div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${currentTime}</div>
+            </div>
         `;
 
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateY(20px)';
         messagesContainer.appendChild(messageDiv);
+        
+        // 动画效果
+        setTimeout(() => {
+            messageDiv.style.transition = 'all 0.3s ease';
+            messageDiv.style.opacity = '1';
+            messageDiv.style.transform = 'translateY(0)';
+        }, 10);
+        
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
@@ -358,10 +476,10 @@ class AIRoleplayApp {
         
         if (loading && grid) {
             if (show) {
-                loading.style.display = 'block';
+                loading.classList.add('show');
                 grid.style.display = 'none';
             } else {
-                loading.style.display = 'none';
+                loading.classList.remove('show');
                 grid.style.display = 'grid';
             }
         }
@@ -369,7 +487,99 @@ class AIRoleplayApp {
 
     showError(message) {
         console.error('🚨 错误:', message);
-        alert(message);
+        
+        // 创建更友好的错误提示
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+        `;
+        
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>错误：</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(errorDiv);
+        
+        // 5秒后自动移除
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+
+    showCharacterInfo(characterId) {
+        const character = this.characters.find(c => c.id === characterId);
+        if (!character) return;
+        
+        // 显示角色详情模态框
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;">
+                        <h5 class="modal-title">
+                            <span style="font-size: 1.5rem; margin-right: 0.5rem;">${this.getCharacterEmoji(character.category)}</span>
+                            ${character.name}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                <div class="character-avatar" style="width: 100px; height: 100px; font-size: 3rem; margin: 0 auto;">
+                                    ${this.getCharacterEmoji(character.category)}
+                                </div>
+                                <div class="mt-2">
+                                    <span class="badge" style="background: var(--primary-color); font-size: 0.9rem;">
+                                        ${this.getCategoryName(character.category)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h6 style="color: var(--primary-color); font-weight: 600;">背景介绍</h6>
+                                <p style="line-height: 1.6; color: var(--text-dark);">${character.background}</p>
+                                
+                                <h6 style="color: var(--primary-color); font-weight: 600; margin-top: 1.5rem;">专业领域</h6>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    ${character.tags.map(tag => `
+                                        <span class="tag" style="background: var(--bg-secondary); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;">
+                                            ${tag}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        <button type="button" class="btn" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;" 
+                                onclick="window.app.startChat('${character.id}'); bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide();">
+                            <i class="fas fa-comments me-2"></i>开始对话
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        // 模态框关闭后移除DOM
+        modal.addEventListener('hidden.bs.modal', () => {
+            modal.remove();
+        });
     }
 
     // 语音相关功能（简化版）
