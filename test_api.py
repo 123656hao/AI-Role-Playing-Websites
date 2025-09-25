@@ -1,60 +1,54 @@
 #!/usr/bin/env python3
 """
-测试豆包API连接
+测试API端点
 """
 
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+import requests
+import json
 
-# 加载环境变量
-load_dotenv()
-
-def test_api():
-    print("🔍 测试豆包API连接...")
-    
-    # 从环境变量获取配置
-    api_key = os.getenv('ARK_API_KEY') or os.getenv('OPENAI_API_KEY')
-    api_base = os.getenv('OPENAI_API_BASE', 'https://ark.cn-beijing.volces.com/api/v3')
-    model = os.getenv('OPENAI_MODEL', 'doubao-seed-1-6-250615')
-    
-    print(f"API Key: {api_key[:10]}...{api_key[-10:] if api_key else 'None'}")
-    print(f"API Base: {api_base}")
-    print(f"Model: {model}")
-    print()
-    
-    if not api_key:
-        print("❌ 未找到API密钥，请检查环境变量配置")
-        return False
-    
+def test_characters_api():
+    """测试角色API"""
     try:
-        # 初始化客户端
-        client = OpenAI(
-            api_key=api_key,
-            base_url=api_base
-        )
+        # 测试不同端口
+        ports = [5000, 5001, 5002]
         
-        print("📤 发送测试请求...")
+        for port in ports:
+            url = f"http://localhost:{port}/api/characters"
+            print(f"测试端口 {port}: {url}")
+            
+            try:
+                response = requests.get(url, timeout=5)
+                print(f"  状态码: {response.status_code}")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    print(f"  成功! 角色数量: {len(data.get('characters', []))}")
+                    print(f"  角色列表: {[c['name'] for c in data.get('characters', [])]}")
+                    return port
+                else:
+                    print(f"  失败: {response.text}")
+                    
+            except requests.exceptions.ConnectionError:
+                print(f"  连接失败: 端口 {port} 无服务")
+            except Exception as e:
+                print(f"  错误: {e}")
         
-        # 发送测试请求
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": "你好，请简单介绍一下自己。"
-                }
-            ],
-            max_tokens=100
-        )
-        
-        print("✅ API测试成功!")
-        print(f"回复: {response.choices[0].message.content}")
-        return True
+        print("所有端口测试完毕，未找到可用的API服务")
+        return None
         
     except Exception as e:
-        print(f"❌ API测试失败: {e}")
-        return False
+        print(f"测试失败: {e}")
+        return None
 
 if __name__ == "__main__":
-    test_api()
+    print("=" * 50)
+    print("🧪 测试角色API端点")
+    print("=" * 50)
+    
+    working_port = test_characters_api()
+    
+    if working_port:
+        print(f"\n✅ 找到工作端口: {working_port}")
+    else:
+        print(f"\n❌ 未找到工作的API服务")
+        print("请确保roleplay_app.py正在运行")

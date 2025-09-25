@@ -84,9 +84,14 @@ class WebSocketHandler:
             session_id = str(uuid.uuid4())
             
             # 获取角色信息
-            from services.character_service import CharacterService
-            character_service = CharacterService()
-            character = character_service.get_character_by_id(character_id)
+            try:
+                from services.character_service import CharacterService
+                character_service = CharacterService()
+                character = character_service.get_character_by_id(character_id)
+            except ImportError:
+                # 如果没有独立的角色服务，使用全局的
+                import app
+                character = app.character_service.get_character_by_id(character_id)
             
             if not character:
                 await self.send_error(websocket, f"角色不存在: {character_id}")
