@@ -656,5 +656,6 @@ def main():
     except Exception as e:
         print(f"✗ 应用启动失败: {e}")
 
+
 if __name__ == '__main__':
     main()
