@@ -639,30 +639,60 @@ class BaiduVoiceService:
         try:
             # 如果输入数据太小，创建一个短暂的静音
             if len(audio_data) < 1000:
-                logger.info("音频数据太小，创建静音WAV")
+                logger.warning("音频数据太小，可能是静音录音")
                 return AudioConverter.generate_silence_wav(1.0, 16000)
             
-            # 尝试提取音频数据部分
-            if len(audio_data) > 44:
-                # 跳过可能的WAV头部
-                pcm_data = audio_data[44:]
+            # 检查是否是WebM格式（通过文件头识别）
+            if audio_data.startswith(b'\x1a\x45\xdf\xa3'):  # WebM/Matroska 文件头
+                logger.warning("检测到WebM格式，但无法直接转换。建议前端使用WAV格式录音")
+                # 对于WebM格式，我们无法简单地提取PCM数据
+                # 返回一个提示用户的静音文件
+                return AudioConverter.generate_silence_wav(2.0, 16000)
+            
+            # 检查是否是有效的WAV文件
+            if audio_data.startswith(b'RIFF') and b'WAVE' in audio_data[:20]:
+                # 这是一个WAV文件，尝试提取PCM数据
+                try:
+                    # 查找data块
+                    data_pos = audio_data.find(b'data')
+                    if data_pos > 0:
+                        # data块后4字节是数据大小，然后是实际音频数据
+                        pcm_start = data_pos + 8
+                        pcm_data = audio_data[pcm_start:]
+                    else:
+                        # 如果找不到data块，跳过标准WAV头（44字节）
+                        pcm_data = audio_data[44:]
+                except:
+                    pcm_data = audio_data[44:]
             else:
+                # 假设是原始PCM数据
                 pcm_data = audio_data
             
-            # 限制数据长度（最多10秒的16kHz音频）
-            max_samples = 16000 * 10 * 2  # 10秒 * 16kHz * 2字节
+            # 检查PCM数据质量
+            if len(pcm_data) < 3200:  # 少于0.1秒的16kHz音频
+                logger.warning(f"PCM数据太短: {len(pcm_data)}字节，可能录音时间不足")
+                return AudioConverter.generate_silence_wav(1.0, 16000)
+            
+            # 限制数据长度（最多30秒的16kHz音频）
+            max_samples = 16000 * 30 * 2  # 30秒 * 16kHz * 2字节
             if len(pcm_data) > max_samples:
                 pcm_data = pcm_data[:max_samples]
+                logger.info(f"音频数据过长，截取到30秒")
             
             # 确保数据长度是偶数（16位音频）
             if len(pcm_data) % 2 != 0:
                 pcm_data = pcm_data[:-1]
             
+            # 检查音频数据是否全为零（静音）
+            if all(b == 0 for b in pcm_data[:min(1000, len(pcm_data))]):
+                logger.warning("检测到静音数据，可能麦克风未工作")
+                return AudioConverter.generate_silence_wav(1.0, 16000)
+            
             # 创建标准WAV文件
             standard_wav = AudioConverter.create_wav_from_pcm(pcm_data, 16000, 1, 2)
             
             if standard_wav:
-                logger.info(f"创建标准WAV成功，大小: {len(standard_wav)}字节")
+                logger.info(f"创建标准WAV成功，大小: {len(standard_wav)}字节，PCM数据: {len(pcm_data)}字节")
                 return standard_wav
             else:
                 logger.error("创建标准WAV失败")

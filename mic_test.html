@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麦克风权限测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        .test-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        .test-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            white-space: pre-line;
+        }
+        .success { background: rgba(40, 167, 69, 0.3); }
+        .warning { background: rgba(255, 193, 7, 0.3); }
+        .error { background: rgba(220, 53, 69, 0.3); }
+        .level-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .level-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 麦克风权限诊断工具</h1>
+        
+        <div class="test-section">
+            <h3>步骤1: 基础权限测试</h3>
+            <button class="test-btn" onclick="testBasicPermission()">测试麦克风权限</button>
+            <div id="basicResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>步骤2: 音频级别测试</h3>
+            <button class="test-btn" onclick="testAudioLevel()" id="levelBtn" disabled>测试音频级别</button>
+            <div class="level-bar" id="levelBar" style="display: none;">
+                <div class="level-fill" id="levelFill"></div>
+            </div>
+            <div id="levelResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>步骤3: 录音功能测试</h3>
+            <button class="test-btn" onclick="testRecording()" id="recordBtn" disabled>测试录音功能</button>
+            <div id="recordResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="help-section">
+            <h3>🆘 常见问题解决方案</h3>
+            <div class="result">
+<strong>权限被拒绝？</strong>
+• 点击地址栏左侧的🔒或🛡️图标
+• 将麦克风设置改为"允许"
+• 刷新页面重试
+
+<strong>找不到麦克风？</strong>
+• 检查麦克风是否正确连接
+• 在系统设置中启用麦克风
+• 尝试重新插拔麦克风
+
+<strong>浏览器不支持？</strong>
+• 使用Chrome、Firefox或Edge浏览器
+• 确保浏览器版本较新
+• 尝试HTTPS地址访问
+
+<strong>音频级别太低？</strong>
+• 调高系统麦克风音量
+• 靠近麦克风说话
+• 检查麦克风是否静音
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStream = null;
+        let audioContext = null;
+
+        async function testBasicPermission() {
+            const btn = event.target;
+            const result = document.getElementById('basicResult');
+            
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            result.style.display = 'block';
+            result.className = 'result';
+            
+            try {
+                // 检查浏览器支持
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('浏览器不支持录音功能');
+                }
+
+                // 获取设备列表
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+                
+                result.textContent = `✅ 浏览器支持录音\n✅ 检测到 ${audioInputs.length} 个音频输入设备`;
+
+                // 请求麦克风权限
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: 44100,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                const tracks = currentStream.getAudioTracks();
+                result.textContent += `\n✅ 麦克风权限获取成功\n✅ 音频轨道: ${tracks[0].label || '默认麦克风'}`;
+                result.className = 'result success';
+                
+                // 启用下一步测试
+                document.getElementById('levelBtn').disabled = false;
+                
+            } catch (error) {
+                let errorMsg = '❌ 测试失败: ';
+                if (error.name === 'NotAllowedError') {
+                    errorMsg += '麦克风权限被拒绝\n请点击地址栏左侧图标允许麦克风访问';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg += '未找到麦克风设备\n请检查麦克风连接';
+                } else {
+                    errorMsg += error.message;
+                }
+                result.textContent = errorMsg;
+                result.className = 'result error';
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '重新测试权限';
+        }
+
+        async function testAudioLevel() {
+            if (!currentStream) {
+                alert('请先完成权限测试');
+                return;
+            }
+
+            const btn = document.getElementById('levelBtn');
+            const result = document.getElementById('levelResult');
+            const levelBar = document.getElementById('levelBar');
+            const levelFill = document.getElementById('levelFill');
+            
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            result.style.display = 'block';
+            levelBar.style.display = 'block';
+            
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(currentStream);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                let maxLevel = 0;
+                let testCount = 0;
+                const maxTests = 50; // 5秒测试
+
+                result.textContent = '🎤 请说话测试音频级别...';
+                result.className = 'result';
+
+                const checkLevel = () => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const level = Math.max(...dataArray);
+                    maxLevel = Math.max(maxLevel, level);
+                    
+                    // 更新可视化
+                    levelFill.style.width = `${(level / 255) * 100}%`;
+                    
+                    testCount++;
+                    if (testCount < maxTests) {
+                        setTimeout(checkLevel, 100);
+                    } else {
+                        // 测试完成
+                        if (maxLevel > 20) {
+                            result.textContent = `🎉 音频级别测试成功！\n最大音频级别: ${maxLevel}/255\n麦克风工作正常`;
+                            result.className = 'result success';
+                            document.getElementById('recordBtn').disabled = false;
+                        } else {
+                            result.textContent = `⚠️ 音频级别较低\n最大音频级别: ${maxLevel}/255\n请检查麦克风音量设置`;
+                            result.className = 'result warning';
+                        }
+                        
+                        btn.disabled = false;
+                        btn.textContent = '重新测试音频级别';
+                    }
+                };
+
+                checkLevel();
+                
+            } catch (error) {
+                result.textContent = `❌ 音频级别测试失败: ${error.message}`;
+                result.className = 'result error';
+                btn.disabled = false;
+                btn.textContent = '重新测试音频级别';
+            }
+        }
+
+        async function testRecording() {
+            if (!currentStream) {
+                alert('请先完成前面的测试');
+                return;
+            }
+
+            const btn = document.getElementById('recordBtn');
+            const result = document.getElementById('recordResult');
+            
+            btn.disabled = true;
+            btn.textContent = '录音中...';
+            result.style.display = 'block';
+            result.textContent = '🎤 开始3秒录音测试，请说话...';
+            result.className = 'result';
+
+            try {
+                const mediaRecorder = new MediaRecorder(currentStream);
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'audio/wav' });
+                    const size = (blob.size / 1024).toFixed(1);
+                    
+                    if (blob.size > 1000) {
+                        result.textContent = `🎉 录音测试成功！\n录音大小: ${size} KB\n麦克风完全正常，可以使用语音功能`;
+                        result.className = 'result success';
+                    } else {
+                        result.textContent = `⚠️ 录音文件较小\n录音大小: ${size} KB\n可能需要调高音量或靠近麦克风`;
+                        result.className = 'result warning';
+                    }
+                    
+                    btn.disabled = false;
+                    btn.textContent = '重新测试录音';
+                };
+
+                mediaRecorder.start();
+                
+                // 3秒后停止
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, 3000);
+
+            } catch (error) {
+                result.textContent = `❌ 录音测试失败: ${error.message}`;
+                result.className = 'result error';
+                btn.disabled = false;
+                btn.textContent = '重新测试录音';
+            }
+        }
+
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        });
+    </script>
+</body>
+</html>

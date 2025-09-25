@@ -128,6 +128,11 @@ def debug_page():
     """调试页面"""
     return send_from_directory('.', 'debug.html')
 
+@app.route('/mic-test')
+def mic_test():
+    """麦克风测试页面"""
+    return send_from_directory('.', 'mic_test.html')
+
 @app.route('/health')
 def health():
     """健康检查"""
@@ -576,12 +581,69 @@ def main():
     print(f"✓ 使用端口: {port}")
     print("=" * 50)
     print(f"🚀 应用已启动!")
-    print(f"📱 访问地址: http://localhost:{port}")
+    print(f"📱 HTTP访问地址: http://localhost:{port}")
+    print(f"🔒 HTTPS访问地址: https://localhost:{port + 1}")
     print(f"🎯 功能: 语音识别 + AI对话 + 语音合成")
+    print("=" * 50)
+    print("💡 麦克风权限提示:")
+    print("   • 如果麦克风无法使用，请尝试HTTPS地址")
+    print("   • 点击地址栏左侧图标允许麦克风权限")
+    print("   • 首次访问可能需要手动信任证书")
     print("=" * 50)
     
     # 启动应用
     try:
+        # 创建SSL上下文（自签名证书，仅用于开发）
+        import ssl
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        
+        # 尝试使用临时证书
+        try:
+            # 生成临时自签名证书
+            import tempfile
+            import subprocess
+            
+            # 创建临时证书文件
+            cert_file = tempfile.NamedTemporaryFile(suffix='.crt', delete=False)
+            key_file = tempfile.NamedTemporaryFile(suffix='.key', delete=False)
+            cert_file.close()
+            key_file.close()
+            
+            # 生成自签名证书（需要openssl）
+            try:
+                subprocess.run([
+                    'openssl', 'req', '-x509', '-newkey', 'rsa:4096', 
+                    '-keyout', key_file.name, '-out', cert_file.name,
+                    '-days', '365', '-nodes', '-subj', '/CN=localhost'
+                ], check=True, capture_output=True)
+                
+                context.load_cert_chain(cert_file.name, key_file.name)
+                
+                # 启动HTTPS服务器
+                import threading
+                
+                def run_https():
+                    socketio.run(
+                        app,
+                        host='0.0.0.0',
+                        port=port + 1,
+                        debug=False,
+                        ssl_context=context,
+                        allow_unsafe_werkzeug=True
+                    )
+                
+                https_thread = threading.Thread(target=run_https, daemon=True)
+                https_thread.start()
+                
+                print("✓ HTTPS服务器已启动")
+                
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print("⚠️ 无法生成SSL证书，仅启动HTTP服务器")
+            
+        except Exception as ssl_error:
+            print(f"⚠️ SSL设置失败: {ssl_error}")
+        
+        # 启动HTTP服务器
         socketio.run(
             app,
             host='0.0.0.0',

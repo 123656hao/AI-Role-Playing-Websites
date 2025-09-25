@@ -667,44 +667,71 @@
 
         async function startRecording() {
             try {
-                console.log('开始录音...');
+                console.log('🎤 开始Web Audio API录音...');
                 updateVoiceStatus('正在请求麦克风权限...');
                 
+                // 请求麦克风权限，直接使用16kHz采样率
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
-                        sampleRate: 44100,  // 使用更高的采样率
-                        channelCount: 1,
+                        sampleRate: 16000,  // 直接使用16kHz匹配百度API
+                        channelCount: 1,    // 单声道
                         echoCancellation: true,
                         noiseSuppression: true,
                         autoGainControl: true
                     } 
                 });
                 
-                // 尝试使用WAV格式，如果不支持则使用WebM
-                let mimeType = 'audio/wav';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = 'audio/webm;codecs=opus';
-                }
+                console.log('✅ 麦克风权限获取成功，初始化Web Audio API...');
                 
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: mimeType
+                // 创建音频上下文
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
                 });
                 
-                audioChunks = [];
+                console.log('音频上下文采样率:', audioContext.sampleRate, 'Hz');
                 
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                        console.log('录音数据块大小:', event.data.size);
+                // 创建音频源
+                const source = audioContext.createMediaStreamSource(stream);
+                
+                // 创建ScriptProcessor来捕获音频数据
+                const bufferSize = 4096;
+                processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                
+                // 初始化录音数据存储
+                recordedSamples = [];
+                
+                processor.onaudioprocess = (event) => {
+                    if (isRecording) {
+                        const inputBuffer = event.inputBuffer;
+                        const inputData = inputBuffer.getChannelData(0);
+                        
+                        // 复制音频数据
+                        const samples = new Float32Array(inputData.length);
+                        samples.set(inputData);
+                        recordedSamples.push(samples);
+                        
+                        // 可选：实时音频级别监控
+                        let maxLevel = 0;
+                        for (let i = 0; i < samples.length; i++) {
+                            maxLevel = Math.max(maxLevel, Math.abs(samples[i]));
+                        }
+                        
+                        // 每隔一段时间更新状态
+                        if (recordedSamples.length % 50 === 0) {
+                            const duration = (recordedSamples.length * bufferSize) / 16000;
+                            console.log(`录音中... ${duration.toFixed(1)}秒, 音频级别: ${maxLevel.toFixed(3)}`);
+                        }
                     }
                 };
                 
-                mediaRecorder.onstop = async () => {
-                    await processRecording();
-                };
+                // 连接音频节点
+                source.connect(processor);
+                processor.connect(audioContext.destination);
                 
-                // 每100ms收集一次数据，确保有足够的音频数据
-                mediaRecorder.start(100);
+                // 存储stream以便后续清理
+                currentStream = stream;
+                
+                // 开始录音
                 isRecording = true;
                 
                 // 更新UI
@@ -713,6 +740,7 @@
                 voiceBtn.textContent = '🛑';
                 
                 updateVoiceStatus('正在录音... 请说话，再次点击停止');
+                console.log('✅ Web Audio API录音已开始');
                 
                 // 添加最小录音时间检查
                 setTimeout(() => {
@@ -728,15 +756,26 @@
         }
 
         async function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                console.log('停止录音...');
-                
-                mediaRecorder.stop();
+            if (isRecording) {
+                console.log('🛑 停止Web Audio API录音...');
                 isRecording = false;
                 
+                // 停止音频处理
+                if (processor) {
+                    processor.disconnect();
+                    processor = null;
+                }
+                
                 // 停止所有音频轨道
-                if (mediaRecorder.stream) {
-                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+                
+                // 关闭音频上下文
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
                 }
                 
                 // 更新UI
@@ -745,7 +784,157 @@
                 voiceBtn.textContent = '🎤';
                 
                 updateVoiceStatus('处理录音中...');
+                
+                // 处理录音数据
+                await processRecordedAudio();
             }
+        }
+
+        // 处理Web Audio API录制的音频数据
+        async function processRecordedAudio() {
+            try {
+                console.log('📊 开始处理录音数据...');
+                
+                if (recordedSamples.length === 0) {
+                    updateVoiceStatus('录音数据为空，请重新录音');
+                    return;
+                }
+
+                // 合并所有音频样本
+                let totalLength = 0;
+                recordedSamples.forEach(samples => {
+                    totalLength += samples.length;
+                });
+
+                console.log('录音统计:');
+                console.log('- 数据块数量:', recordedSamples.length);
+                console.log('- 总样本数:', totalLength);
+                console.log('- 录音时长:', (totalLength / 16000).toFixed(2), '秒');
+
+                // 检查录音长度
+                const duration = totalLength / 16000;
+                if (duration < 0.5) {
+                    updateVoiceStatus('录音时间太短（少于0.5秒），请重新录音');
+                    recordedSamples = [];
+                    return;
+                }
+
+                if (duration > 30) {
+                    updateVoiceStatus('录音时间太长（超过30秒），请录制较短的音频');
+                    recordedSamples = [];
+                    return;
+                }
+
+                // 合并音频数据
+                const combinedSamples = new Float32Array(totalLength);
+                let offset = 0;
+                recordedSamples.forEach(samples => {
+                    combinedSamples.set(samples, offset);
+                    offset += samples.length;
+                });
+
+                // 检查音频质量
+                let maxAmplitude = 0;
+                let rmsSum = 0;
+                for (let i = 0; i < combinedSamples.length; i++) {
+                    const sample = Math.abs(combinedSamples[i]);
+                    maxAmplitude = Math.max(maxAmplitude, sample);
+                    rmsSum += sample * sample;
+                }
+                const rms = Math.sqrt(rmsSum / combinedSamples.length);
+
+                console.log('音频质量分析:');
+                console.log('- 最大振幅:', maxAmplitude.toFixed(4));
+                console.log('- RMS值:', rms.toFixed(4));
+
+                if (maxAmplitude < 0.001) {
+                    updateVoiceStatus('检测到静音，请检查麦克风设置并重新录音');
+                    recordedSamples = [];
+                    return;
+                }
+
+                if (rms < 0.0001) {
+                    updateVoiceStatus('音频信号太弱，请靠近麦克风或提高音量');
+                    recordedSamples = [];
+                    return;
+                }
+
+                // 创建WAV文件
+                updateVoiceStatus('正在生成WAV文件...');
+                const wavBlob = createWavBlob(combinedSamples, 16000);
+                
+                console.log('✅ WAV文件生成成功:');
+                console.log('- 文件大小:', wavBlob.size, '字节');
+                console.log('- 文件类型:', wavBlob.type);
+
+                // 转换为base64并发送
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const audioBase64 = reader.result;
+                    console.log('📤 发送WAV数据到服务器...');
+                    console.log('Base64长度:', audioBase64.length);
+
+                    // 发送到服务器进行语音识别
+                    socket.emit('voice_message', {
+                        audio: audioBase64
+                    });
+
+                    updateVoiceStatus('正在识别语音...');
+                };
+
+                reader.onerror = () => {
+                    updateVoiceStatus('音频数据读取失败');
+                };
+
+                reader.readAsDataURL(wavBlob);
+
+                // 清理数据
+                recordedSamples = [];
+
+            } catch (error) {
+                console.error('处理录音失败:', error);
+                updateVoiceStatus('处理录音失败: ' + error.message);
+                recordedSamples = [];
+            }
+        }
+
+        // 创建WAV Blob
+        function createWavBlob(samples, sampleRate) {
+            const length = samples.length;
+            const arrayBuffer = new ArrayBuffer(44 + length * 2);
+            const view = new DataView(arrayBuffer);
+
+            // WAV文件头
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + length * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);                    // fmt chunk size
+            view.setUint16(20, 1, true);                     // PCM format
+            view.setUint16(22, 1, true);                     // mono
+            view.setUint32(24, sampleRate, true);            // sample rate
+            view.setUint32(28, sampleRate * 2, true);        // byte rate
+            view.setUint16(32, 2, true);                     // block align
+            view.setUint16(34, 16, true);                    // bits per sample
+            writeString(36, 'data');
+            view.setUint32(40, length * 2, true);            // data size
+
+            // 写入音频数据（16位PCM）
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                const sample = Math.max(-1, Math.min(1, samples[i]));
+                const intSample = Math.round(sample * 32767);
+                view.setInt16(offset, intSample, true);
+                offset += 2;
+            }
+
+            return new Blob([arrayBuffer], { type: 'audio/wav' });
         }
 
         async function processRecording() {
