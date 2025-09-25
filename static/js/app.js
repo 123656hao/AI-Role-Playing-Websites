@@ -224,12 +224,17 @@ class AIRoleplayApp {
         // 简化描述为一行
         const shortDescription = this.getShortDescription(background);
         
+        // 获取角色头像
+        const avatarUrl = this.getCharacterAvatar(character);
+        
         card.innerHTML = `
             <div class="character-header">
-                <div class="character-avatar">${this.getCharacterEmoji(category)}</div>
+                <div class="character-avatar">
+                    ${avatarUrl ? `<img src="${avatarUrl}" alt="${name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+                    <div style="${avatarUrl ? 'display: none;' : 'display: flex;'} width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(category)}</div>
+                </div>
                 <div class="character-info">
                     <h3 style="text-align: center !important; display: flex; justify-content: center; align-items: center; margin: 0 auto;">${name}</h3>
-                    <div class="character-category" style="text-align: center !important; display: flex; justify-content: center; align-items: center;">${this.getCategoryName(category)}</div>
                 </div>
             </div>
             <div class="character-description" style="text-align: center !important;">${shortDescription}</div>
@@ -261,6 +266,24 @@ class AIRoleplayApp {
             return background || '暂无介绍';
         }
         return background.substring(0, 40) + '...';
+    }
+
+    getCharacterAvatar(character) {
+        // 角色头像映射，使用高质量稳定的头像图片
+        const avatarMap = {
+            'socrates': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Socrates_Louvre.jpg/300px-Socrates_Louvre.jpg',
+            'harry_potter': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg',
+            'einstein': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg',
+            'shakespeare': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg',
+            'confucius': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Confucius_02.png/256px-Confucius_02.png',
+            'marie_curie': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg'
+        };
+        
+        // 如果没有在映射中找到，尝试使用角色数据中的avatar字段
+        const primaryUrl = avatarMap[character.id];
+        const fallbackUrl = character.avatar;
+        
+        return primaryUrl || fallbackUrl || null;
     }
 
     getCharacterEmoji(category) {
@@ -317,13 +340,19 @@ class AIRoleplayApp {
             return;
         }
         
-        suggestions.innerHTML = topMatches.map(character => `
-            <div class="suggestion-item" onclick="window.app.selectSuggestion('${character.name}')">
-                <span style="margin-right: 0.5rem;">${this.getCharacterEmoji(character.category)}</span>
-                <strong>${character.name}</strong>
-                <small style="margin-left: 0.5rem; color: var(--text-muted);">${this.getCategoryName(character.category)}</small>
-            </div>
-        `).join('');
+        suggestions.innerHTML = topMatches.map(character => {
+            const avatarUrl = this.getCharacterAvatar(character);
+            const avatarDisplay = avatarUrl ? 
+                `<img src="${avatarUrl}" alt="${character.name}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 0.5rem;" onerror="this.outerHTML='<span style=\'margin-right: 0.5rem; font-size: 16px;\'>${this.getCharacterEmoji(character.category)}</span>'">` :
+                `<span style="margin-right: 0.5rem; font-size: 16px;">${this.getCharacterEmoji(character.category)}</span>`;
+            
+            return `
+                <div class="suggestion-item" onclick="window.app.selectSuggestion('${character.name}')">
+                    ${avatarDisplay}
+                    <strong>${character.name}</strong>
+                </div>
+            `;
+        }).join('');
         
         suggestions.style.display = 'block';
     }
@@ -394,8 +423,17 @@ class AIRoleplayApp {
     showChatModal(character, welcomeMessage) {
         // 设置角色信息
         document.getElementById('chatCharacterName').textContent = character.name;
-        document.getElementById('chatCharacterCategory').textContent = this.getCategoryName(character.category);
-        document.getElementById('chatAvatar').textContent = this.getCharacterEmoji(character.category);
+        
+        // 设置头像
+        const chatAvatar = document.getElementById('chatAvatar');
+        const avatarUrl = this.getCharacterAvatar(character);
+        
+        if (avatarUrl) {
+            chatAvatar.innerHTML = `<img src="${avatarUrl}" alt="${character.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(character.category)}</div>`;
+        } else {
+            chatAvatar.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(character.category)}</div>`;
+        }
 
         // 清空消息容器
         const messagesContainer = document.getElementById('messagesContainer');
@@ -453,7 +491,19 @@ class AIRoleplayApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
 
-        const avatar = sender === 'user' ? '👤' : this.getCharacterEmoji(this.currentCharacter?.category);
+        // 获取头像
+        let avatar;
+        if (sender === 'user') {
+            avatar = '👤';
+        } else {
+            const avatarUrl = this.currentCharacter ? this.getCharacterAvatar(this.currentCharacter) : null;
+            if (avatarUrl) {
+                avatar = `<img src="${avatarUrl}" alt="${this.currentCharacter.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.outerHTML='${this.getCharacterEmoji(this.currentCharacter?.category)}'">`;
+            } else {
+                avatar = this.getCharacterEmoji(this.currentCharacter?.category);
+            }
+        }
+        
         const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         
         messageDiv.innerHTML = `
@@ -546,12 +596,15 @@ class AIRoleplayApp {
                         <div class="row">
                             <div class="col-md-4 text-center mb-3">
                                 <div class="character-avatar" style="width: 100px; height: 100px; font-size: 3rem; margin: 0 auto;">
-                                    ${this.getCharacterEmoji(character.category)}
-                                </div>
-                                <div class="mt-2">
-                                    <span class="badge" style="background: var(--primary-color); font-size: 0.9rem;">
-                                        ${this.getCategoryName(character.category)}
-                                    </span>
+                                    ${(() => {
+                                        const avatarUrl = this.getCharacterAvatar(character);
+                                        if (avatarUrl) {
+                                            return `<img src="${avatarUrl}" alt="${character.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    <div style="display: none; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">${this.getCharacterEmoji(character.category)}</div>`;
+                                        } else {
+                                            return `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">${this.getCharacterEmoji(character.category)}</div>`;
+                                        }
+                                    })()}
                                 </div>
                             </div>
                             <div class="col-md-8">
