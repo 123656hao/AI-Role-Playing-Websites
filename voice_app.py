@@ -27,6 +27,7 @@ try:
     from services.baidu_voice_service import BaiduVoiceService
     from services.baidu_tts_service import BaiduTTSService
     from services.ai_service import AIRoleplayService
+    from services.character_service import CharacterService
     from utils.port_manager import PortManager
     print("✓ 所有服务模块导入成功")
 except ImportError as e:
@@ -51,10 +52,14 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 voice_service = None
 tts_service = None
 ai_service = None
+character_service = None
+
+# 实时语音处理器
+realtime_voice_handler = None
 
 def init_services():
     """初始化所有服务"""
-    global voice_service, tts_service, ai_service
+    global voice_service, tts_service, ai_service, character_service
     
     try:
         # 初始化百度语音识别服务
@@ -69,9 +74,25 @@ def init_services():
         ai_service = AIRoleplayService()
         logger.info("✓ AI服务初始化成功")
         
+        # 初始化角色服务
+        character_service = CharacterService()
+        logger.info("✓ 角色服务初始化成功")
+        
         return True
     except Exception as e:
         logger.error(f"✗ 服务初始化失败: {e}")
+        return False
+
+def init_realtime_voice_handler():
+    """初始化实时语音处理器"""
+    global realtime_voice_handler
+    try:
+        from services.realtime_voice_handler import RealtimeVoiceHandler
+        realtime_voice_handler = RealtimeVoiceHandler(voice_service, ai_service, tts_service)
+        logger.info("✓ 实时语音处理器初始化成功")
+        return True
+    except Exception as e:
+        logger.error(f"✗ 实时语音处理器初始化失败: {e}")
         return False
 
 @app.route('/')
@@ -113,10 +134,15 @@ def voice_chat():
     """语音聊天页面"""
     return render_template('voice_chat.html')
 
+@app.route('/realtime')
+def realtime_voice():
+    """实时语音对话页面"""
+    return render_template('realtime_voice_chat.html')
+
 @app.route('/test')
 def test_characters():
     """角色测试页面"""
-    return send_from_directory('.', 'test_characters.html')
+    return send_from_directory('.', 'Test/test_characters.html')
 
 @app.route('/simple')
 def simple_test():
@@ -132,6 +158,11 @@ def debug_page():
 def mic_test():
     """麦克风测试页面"""
     return send_from_directory('.', 'mic_test.html')
+
+@app.route('/unity-test')
+def unity_test():
+    """Unity集成测试页面"""
+    return send_from_directory('.', 'unity_test.html')
 
 @app.route('/health')
 def health():
@@ -171,7 +202,10 @@ def load_characters():
 def get_characters():
     """获取可用角色列表"""
     try:
-        characters = load_characters()
+        if character_service:
+            characters = character_service.get_all_characters()
+        else:
+            characters = load_characters()
         return jsonify({
             'success': True,
             'characters': characters
@@ -207,6 +241,259 @@ def voice_status():
             'error': str(e)
         })
 
+@app.route('/api/voice/upload', methods=['POST'])
+def upload_voice():
+    """处理语音上传和识别"""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': '没有音频文件'
+            }), 400
+        
+        file = request.files['audio']
+        
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': '没有选择文件'
+            }), 400
+        
+        # 语音识别
+        text = voice_service.speech_to_text(file)
+        
+        if not text or text.startswith('语音识别') or text.startswith('百度') or text.startswith('音频'):
+            return jsonify({
+                'success': False,
+                'error': text or '语音识别失败'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'text': text
+        })
+        
+    except Exception as e:
+        logger.error(f"语音上传处理失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """处理聊天请求"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'message' not in data:
+            return jsonify({
+                'success': False,
+                'error': '缺少消息内容'
+            }), 400
+        
+        message = data['message'].strip()
+        character_id = data.get('character_id', 'default')
+        
+        if not message:
+            return jsonify({
+                'success': False,
+                'error': '消息不能为空'
+            }), 400
+        
+        # 获取角色信息
+        if character_service:
+            character = character_service.get_character_by_id(character_id)
+        else:
+            # 从文件加载角色
+            characters_list = load_characters()
+            character = None
+            for char in characters_list:
+                if char['id'] == character_id:
+                    character = char
+                    break
+        
+        if not character:
+            return jsonify({
+                'success': False,
+                'error': '角色不存在'
+            }), 404
+        
+        # 生成AI回复
+        response = ai_service.generate_response(character, message, 'web_session')
+        
+        # 生成语音合成
+        audio_url = None
+        try:
+            tts_result = tts_service.text_to_speech(response, character)
+            if tts_result and tts_result.get('success'):
+                audio_url = tts_result.get('audio_url')
+        except Exception as e:
+            logger.warning(f"语音合成失败: {e}")
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'character': character,
+            'audio_url': audio_url
+        })
+        
+    except Exception as e:
+        logger.error(f"聊天处理失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/tts', methods=['POST'])
+def unity_tts():
+    """Unity TTS API - 为Unity 3D角色提供语音合成"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'text' not in data:
+            return jsonify({
+                'success': False,
+                'error': '缺少文本内容'
+            }), 400
+        
+        text = data['text'].strip()
+        character_id = data.get('character_id', 'assistant')
+        voice_settings = data.get('voice_settings', {})
+        
+        if not text:
+            return jsonify({
+                'success': False,
+                'error': '文本不能为空'
+            }), 400
+        
+        logger.info(f"Unity TTS请求: 角色={character_id}, 文本长度={len(text)}")
+        
+        # 获取角色信息
+        characters_list = load_characters()
+        character = None
+        
+        for char in characters_list:
+            if char['id'] == character_id:
+                character = char
+                break
+        
+        # 如果没找到角色，使用默认设置
+        if not character:
+            character = {
+                'id': character_id,
+                'name': 'AI助手',
+                'gender': 'female',  # 默认女声
+                'voice_type': 'female'
+            }
+        
+        # 根据Unity传来的语音设置调整角色参数
+        if voice_settings and character:
+            character = character.copy()
+            character['unity_voice_settings'] = voice_settings
+        
+        # 语音合成
+        tts_result = tts_service.text_to_speech(text, character)
+        
+        if tts_result:
+            # 处理TTS结果的兼容性
+            audio_path = None
+            
+            if isinstance(tts_result, dict):
+                if tts_result.get('success'):
+                    audio_path = tts_result.get('audio_path')
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': tts_result.get('error', '语音合成失败')
+                    }), 500
+            elif isinstance(tts_result, str):
+                # 从URL推导出文件路径
+                if tts_result.startswith('/static/audio/'):
+                    filename = tts_result.replace('/static/audio/', '')
+                    audio_path = os.path.join('static', 'audio', filename)
+            
+            # 检查是否是Unity请求
+            user_agent = request.headers.get('User-Agent', '')
+            is_unity_client = 'Unity' in user_agent or data.get('unity_client', False)
+            
+            if is_unity_client and audio_path and os.path.exists(audio_path):
+                # 直接返回音频文件给Unity
+                from flask import send_file
+                logger.info(f"向Unity发送音频文件: {audio_path}")
+                return send_file(
+                    audio_path,
+                    mimetype='audio/wav',
+                    as_attachment=False
+                )
+            else:
+                # 返回JSON响应给Web客户端
+                return jsonify({
+                    'success': True,
+                    'audio_url': tts_result if isinstance(tts_result, str) else tts_result.get('audio_url'),
+                    'character_id': character_id,
+                    'voice_type': character.get('gender', 'female'),
+                    'character_name': character.get('name', 'AI助手')
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '语音合成失败'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Unity TTS处理失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/characters/unity')
+def get_unity_characters():
+    """获取Unity角色配置"""
+    try:
+        # 加载角色数据
+        characters = load_characters()
+        
+        # 转换为Unity格式，添加性别和语音类型信息
+        unity_characters = []
+        for char in characters:
+            # 根据角色名称推断性别
+            gender = 'male'
+            if any(name in char.get('name', '') for name in ['玛丽', '居里', '李老师']):
+                gender = 'female'
+            elif char.get('name') == 'AI助手':
+                gender = 'female'
+            
+            unity_char = {
+                'id': char['id'],
+                'name': char['name'],
+                'gender': gender,
+                'voice_type': gender,
+                'category': char.get('category', 'general'),
+                'background': char.get('background', ''),
+                'personality': char.get('personality', ''),
+                'voice_settings': {
+                    'pitch': 1.1 if gender == 'female' else 0.9,
+                    'speed': 1.0,
+                    'voice_id': f"{gender}_default"
+                }
+            }
+            unity_characters.append(unity_char)
+        
+        return jsonify({
+            'success': True,
+            'characters': unity_characters,
+            'total_count': len(unity_characters)
+        })
+        
+    except Exception as e:
+        logger.error(f"获取Unity角色配置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @socketio.on('connect')
 def handle_connect():
     """客户端连接"""
@@ -217,6 +504,14 @@ def handle_connect():
 def handle_disconnect():
     """客户端断开连接"""
     logger.info(f"客户端已断开: {request.sid}")
+    
+    # 清理实时语音会话
+    if realtime_voice_handler:
+        # 查找并结束该连接的会话
+        for session_id, session in realtime_voice_handler.active_sessions.items():
+            if session.get('connection_id') == request.sid:
+                realtime_voice_handler.end_session(session_id)
+                break
 
 @socketio.on('chat_message')
 def handle_chat_message(data):
@@ -231,15 +526,19 @@ def handle_chat_message(data):
         
         logger.info(f"收到聊天消息: {message}, 角色: {character_id}")
         
-        # 从文件加载角色信息
-        characters_list = load_characters()
-        character = None
-        
-        # 查找对应的角色
-        for char in characters_list:
-            if char['id'] == character_id:
-                character = char
-                break
+        # 获取角色信息
+        if character_service:
+            character = character_service.get_character_by_id(character_id)
+        else:
+            # 从文件加载角色信息
+            characters_list = load_characters()
+            character = None
+            
+            # 查找对应的角色
+            for char in characters_list:
+                if char['id'] == character_id:
+                    character = char
+                    break
         
         # 如果没找到，使用默认角色
         if not character:
@@ -267,7 +566,7 @@ def handle_chat_message(data):
             audio_url = None
             try:
                 emit('status', {'message': '正在生成语音...', 'type': 'info'})
-                tts_result = tts_service.text_to_speech(ai_response)
+                tts_result = tts_service.text_to_speech(ai_response, character)
                 
                 # 处理TTS结果的兼容性
                 if tts_result:
@@ -276,32 +575,14 @@ def handle_chat_message(data):
                     # 如果返回的是字典格式
                     if isinstance(tts_result, dict):
                         if tts_result.get('success'):
-                            audio_path = tts_result.get('audio_path')
+                            audio_url = tts_result.get('audio_url')
                         else:
                             logger.warning(f"语音合成失败: {tts_result.get('error', '未知错误')}")
                     
                     # 如果返回的是字符串格式（旧版本兼容）
                     elif isinstance(tts_result, str):
-                        # 从URL推导出文件路径
-                        if tts_result.startswith('/static/audio/'):
-                            filename = tts_result.replace('/static/audio/', '')
-                            audio_path = os.path.join('static', 'audio', filename)
-                    
-                    # 处理音频文件
-                    if audio_path and os.path.exists(audio_path):
-                        with open(audio_path, 'rb') as f:
-                            audio_base64 = base64.b64encode(f.read()).decode('utf-8')
-                        audio_url = f"data:audio/wav;base64,{audio_base64}"
-                        
-                        # 清理临时文件
-                        try:
-                            os.unlink(audio_path)
-                        except:
-                            pass
-                        
+                        audio_url = tts_result
                         logger.info("语音合成成功")
-                    else:
-                        logger.warning("语音合成文件不存在")
                 else:
                     logger.warning("语音合成失败")
             except Exception as tts_error:
@@ -311,7 +592,8 @@ def handle_chat_message(data):
             emit('chat_response', {
                 'response': ai_response,
                 'character': character,
-                'audio_url': audio_url
+                'audio_url': audio_url,
+                'timestamp': datetime.now().isoformat()
             })
             
             emit('status', {'message': '处理完成', 'type': 'success'})
@@ -544,6 +826,144 @@ def handle_text_message(data):
         logger.error(f"处理文本消息时出错: {e}")
         emit('error', {'message': f'处理失败: {str(e)}'})
 
+# 实时语音WebSocket事件
+@socketio.on('start_realtime_voice')
+def handle_start_realtime_voice(data):
+    """开始实时语音会话"""
+    try:
+        if not realtime_voice_handler:
+            emit('error', {'message': '实时语音服务未启用'})
+            return
+        
+        character_id = data.get('character_id')
+        if not character_id:
+            emit('error', {'message': '缺少角色ID'})
+            return
+        
+        # 获取角色信息
+        if character_service:
+            character = character_service.get_character_by_id(character_id)
+        else:
+            # 从文件加载角色
+            characters_list = load_characters()
+            character = None
+            for char in characters_list:
+                if char['id'] == character_id:
+                    character = char
+                    break
+        
+        if not character:
+            emit('error', {'message': '角色不存在'})
+            return
+        
+        # 创建回调函数
+        def voice_callback(result):
+            emit('realtime_voice_result', result)
+        
+        # 创建实时语音会话
+        session_id = realtime_voice_handler.create_session(character_id, character, voice_callback)
+        
+        # 记录连接ID
+        if session_id in realtime_voice_handler.active_sessions:
+            realtime_voice_handler.active_sessions[session_id]['connection_id'] = request.sid
+        
+        emit('realtime_voice_started', {
+            'session_id': session_id,
+            'character': character,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        logger.info(f"开始实时语音会话: {session_id} for {character['name']}")
+        
+    except Exception as e:
+        logger.error(f"开始实时语音会话失败: {e}")
+        emit('error', {'message': str(e)})
+
+@socketio.on('realtime_audio_data')
+def handle_realtime_audio_data(data):
+    """处理实时音频数据"""
+    try:
+        if not realtime_voice_handler:
+            emit('error', {'message': '实时语音服务未启用'})
+            return
+        
+        session_id = data.get('session_id')
+        audio_base64 = data.get('audio_data')
+        
+        if not session_id or not audio_base64:
+            emit('error', {'message': '缺少会话ID或音频数据'})
+            return
+        
+        # 解码音频数据
+        import base64
+        audio_data = base64.b64decode(audio_base64)
+        
+        # 创建回调函数
+        def audio_callback(result):
+            emit('realtime_voice_result', result)
+        
+        # 处理音频流
+        realtime_voice_handler.process_audio_stream(session_id, audio_data, audio_callback)
+        
+    except Exception as e:
+        logger.error(f"处理实时音频数据失败: {e}")
+        emit('error', {'message': str(e)})
+
+@socketio.on('stop_realtime_voice')
+def handle_stop_realtime_voice(data):
+    """停止实时语音会话"""
+    try:
+        if not realtime_voice_handler:
+            emit('error', {'message': '实时语音服务未启用'})
+            return
+        
+        session_id = data.get('session_id')
+        if not session_id:
+            emit('error', {'message': '缺少会话ID'})
+            return
+        
+        # 结束会话
+        realtime_voice_handler.end_session(session_id)
+        
+        emit('realtime_voice_stopped', {
+            'session_id': session_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        logger.info(f"停止实时语音会话: {session_id}")
+        
+    except Exception as e:
+        logger.error(f"停止实时语音会话失败: {e}")
+        emit('error', {'message': str(e)})
+
+@socketio.on('update_voice_config')
+def handle_update_voice_config(data):
+    """更新语音配置"""
+    try:
+        if not realtime_voice_handler:
+            emit('error', {'message': '实时语音服务未启用'})
+            return
+        
+        session_id = data.get('session_id')
+        config = data.get('config', {})
+        
+        if not session_id:
+            emit('error', {'message': '缺少会话ID'})
+            return
+        
+        # 更新会话配置
+        realtime_voice_handler.update_session_config(session_id, config)
+        
+        emit('voice_config_updated', {
+            'session_id': session_id,
+            'config': config,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"更新语音配置失败: {e}")
+        emit('error', {'message': str(e)})
+
 def main():
     """主函数"""
     print("=" * 50)
@@ -574,6 +994,13 @@ def main():
         print("✗ 服务初始化失败，程序退出")
         return
     
+    # 初始化实时语音处理器
+    print("🔍 初始化实时语音处理器...")
+    if init_realtime_voice_handler():
+        print("✓ 实时语音处理器已启用")
+    else:
+        print("⚠️ 实时语音处理器启用失败，但不影响基本功能")
+    
     # 获取可用端口
     port_manager = PortManager()
     port = port_manager.find_available_port('localhost', 5000) or 5000
@@ -581,9 +1008,10 @@ def main():
     print(f"✓ 使用端口: {port}")
     print("=" * 50)
     print(f"🚀 应用已启动!")
-    print(f"📱 HTTP访问地址: http://localhost:{port}")
+    print(f"📱 标准语音聊天: http://localhost:{port}")
+    print(f"⚡ 实时语音对话: http://localhost:{port}/realtime")
     print(f"🔒 HTTPS访问地址: https://localhost:{port + 1}")
-    print(f"🎯 功能: 语音识别 + AI对话 + 语音合成")
+    print(f"🎯 功能: 语音识别 + AI对话 + 语音合成 + 实时语音流")
     print("=" * 50)
     print("💡 麦克风权限提示:")
     print("   • 如果麦克风无法使用，请尝试HTTPS地址")

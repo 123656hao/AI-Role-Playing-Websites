@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unity 3D角色集成测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .character-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .character-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .character-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        
+        .character-info h3 {
+            margin: 0;
+            color: #2d3748;
+        }
+        
+        .character-info p {
+            margin: 5px 0 0 0;
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .voice-controls {
+            margin-top: 15px;
+        }
+        
+        .voice-settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .setting-group label {
+            font-size: 12px;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+        
+        .setting-group input {
+            padding: 5px;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .test-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .status.info {
+            background: #bee3f8;
+            color: #2a4365;
+            border: 1px solid #90cdf4;
+        }
+        
+        .audio-player {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .unity-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .unity-info h3 {
+            color: #234e52;
+            margin-top: 0;
+        }
+        
+        .unity-info code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .api-test {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .api-test h3 {
+            color: #742a2a;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Unity 3D角色集成测试</h1>
+        
+        <div class="unity-info">
+            <h3>🔗 Unity集成说明</h3>
+            <p>这个页面模拟Unity客户端与后端的交互。Unity项目需要：</p>
+            <ul>
+                <li>将 <code>unity_integration/</code> 文件夹中的脚本导入Unity项目</li>
+                <li>配置 <code>CharacterManager</code> 组件并设置角色配置文件</li>
+                <li>确保Unity项目可以访问 <code>http://localhost:5000/api/tts</code></li>
+                <li>为男性角色使用男声，女性角色使用女声</li>
+            </ul>
+        </div>
+        
+        <div class="api-test">
+            <h3>🧪 API连接测试</h3>
+            <button class="btn" onclick="testAPIConnection()">测试API连接</button>
+            <div id="apiStatus" class="status" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>👥 角色列表</h3>
+            <button class="btn" onclick="loadCharacters()">加载角色</button>
+            <div id="charactersGrid" class="character-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let characters = [];
+        
+        async function testAPIConnection() {
+            const statusDiv = document.getElementById('apiStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status info';
+            statusDiv.textContent = '正在测试API连接...';
+            
+            try {
+                const response = await fetch('/api/characters/unity');
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✅ API连接成功！找到 ${data.characters.length} 个角色`;
+                    characters = data.characters;
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ API错误: ${data.error}`;
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 连接失败: ${error.message}`;
+            }
+        }
+        
+        async function loadCharacters() {
+            try {
+                const response = await fetch('/api/characters/unity');
+                const data = await response.json();
+                
+                if (data.success) {
+                    characters = data.characters;
+                    renderCharacters();
+                } else {
+                    alert('加载角色失败: ' + data.error);
+                }
+            } catch (error) {
+                alert('加载角色失败: ' + error.message);
+            }
+        }
+        
+        function renderCharacters() {
+            const grid = document.getElementById('charactersGrid');
+            grid.innerHTML = '';
+            
+            characters.forEach(character => {
+                const card = document.createElement('div');
+                card.className = 'character-card';
+                
+                const genderIcon = character.gender === 'male' ? '👨' : '👩';
+                const voiceType = character.gender === 'male' ? '男声' : '女声';
+                
+                card.innerHTML = `
+                    <div class="character-header">
+                        <div class="character-avatar">${genderIcon}</div>
+                        <div class="character-info">
+                            <h3>${character.name}</h3>
+                            <p>性别: ${character.gender} | 语音: ${voiceType}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="voice-controls">
+                        <div class="voice-settings">
+                            <div class="setting-group">
+                                <label>音调 (Pitch)</label>
+                                <input type="range" min="0.5" max="2.0" step="0.1" 
+                                       value="${character.voice_settings.pitch}" 
+                                       id="pitch_${character.id}">
+                            </div>
+                            <div class="setting-group">
+                                <label>语速 (Speed)</label>
+                                <input type="range" min="0.5" max="2.0" step="0.1" 
+                                       value="${character.voice_settings.speed}" 
+                                       id="speed_${character.id}">
+                            </div>
+                        </div>
+                        
+                        <input type="text" class="test-input" 
+                               placeholder="输入要合成的文本..." 
+                               id="text_${character.id}" 
+                               value="你好，我是${character.name}。">
+                        
+                        <button class="btn" onclick="testTTS('${character.id}')">
+                            🔊 测试语音合成
+                        </button>
+                        
+                        <div id="status_${character.id}" class="status" style="display: none;"></div>
+                        <audio id="audio_${character.id}" class="audio-player" controls style="display: none;"></audio>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        async function testTTS(characterId) {
+            const textInput = document.getElementById(`text_${characterId}`);
+            const pitchInput = document.getElementById(`pitch_${characterId}`);
+            const speedInput = document.getElementById(`speed_${characterId}`);
+            const statusDiv = document.getElementById(`status_${characterId}`);
+            const audioPlayer = document.getElementById(`audio_${characterId}`);
+            
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('请输入要合成的文本');
+                return;
+            }
+            
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status info';
+            statusDiv.textContent = '正在生成语音...';
+            
+            try {
+                const requestData = {
+                    text: text,
+                    character_id: characterId,
+                    unity_client: true,
+                    voice_settings: {
+                        pitch: parseFloat(pitchInput.value),
+                        speed: parseFloat(speedInput.value),
+                        voice_id: `${characters.find(c => c.id === characterId).gender}_default`
+                    }
+                };
+                
+                console.log('发送TTS请求:', requestData);
+                
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Unity/2022.3.0f1'  // 模拟Unity请求
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (response.ok) {
+                    const contentType = response.headers.get('Content-Type');
+                    
+                    if (contentType && contentType.includes('audio')) {
+                        // 直接返回的音频数据
+                        const audioBlob = await response.blob();
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        
+                        audioPlayer.src = audioUrl;
+                        audioPlayer.style.display = 'block';
+                        audioPlayer.play();
+                        
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = '✅ 语音合成成功！';
+                    } else {
+                        // JSON响应
+                        const data = await response.json();
+                        if (data.success && data.audio_url) {
+                            audioPlayer.src = data.audio_url;
+                            audioPlayer.style.display = 'block';
+                            audioPlayer.play();
+                            
+                            statusDiv.className = 'status success';
+                            statusDiv.textContent = '✅ 语音合成成功！';
+                        } else {
+                            statusDiv.className = 'status error';
+                            statusDiv.textContent = `❌ 合成失败: ${data.error || '未知错误'}`;
+                        }
+                    }
+                } else {
+                    const errorData = await response.json();
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ 请求失败: ${errorData.error || response.statusText}`;
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 网络错误: ${error.message}`;
+            }
+        }
+        
+        // 页面加载时自动测试API连接
+        window.addEventListener('load', () => {
+            testAPIConnection();
+        });
+    </script>
+</body>
+</html>
