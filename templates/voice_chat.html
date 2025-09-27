@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI语音聊天 - 百度语音识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .character-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .character-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .character-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+        
+        .character-select:focus {
+            border-color: #4facfe;
+            outline: none;
+        }
+        
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            text-align: right;
+        }
+        
+        .message.ai {
+            text-align: left;
+        }
+        
+        .message.system {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .message-header {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .message-content {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        
+        .user .message-content {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .ai .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .message-input:focus {
+            border-color: #4facfe;
+        }
+        
+        .send-button, .voice-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+        
+        .voice-button {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            min-width: 120px;
+        }
+        
+        .voice-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(250, 112, 154, 0.4);
+        }
+        
+        .voice-button.recording {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .status-bar {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .status, .voice-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .status.success, .voice-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error, .voice-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.warning, .voice-status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.recording {
+            background: #ffe6e6;
+            color: #cc0000;
+        }
+        
+        .status.processing {
+            background: #e6f3ff;
+            color: #0066cc;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .audio-controls {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .play-audio-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .play-audio-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .play-audio-btn:active {
+            transform: translateY(0);
+        }
+        
+        .ai .audio-controls {
+            border-top-color: rgba(0,0,0,0.1);
+        }
+        
+        .ai .play-audio-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .ai .play-audio-btn:hover {
+            box-shadow: 0 3px 10px rgba(79, 172, 254, 0.3);
+        }
+        
+        .audio-control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+        
+        .audio-control-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .audio-control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .audio-status {
+            font-size: 12px;
+            color: #666;
+            padding: 4px 8px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI语音聊天</h1>
+            <p>支持百度语音识别的智能对话系统</p>
+        </div>
+        
+        <div class="character-section">
+            <label for="character-select">选择对话角色:</label>
+            <select id="character-select" class="character-select">
+                <option value="">正在加载角色...</option>
+            </select>
+        </div>
+        
+        <div id="chat-container" class="chat-container">
+            <div class="empty-state">
+                <h3>👋 欢迎使用AI语音聊天</h3>
+                <p>选择一个角色开始对话吧！</p>
+                <p>💡 你可以输入文字或按住语音按钮说话</p>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="audio-control-panel">
+                <button id="stop-audio-button" class="audio-control-btn" onclick="voiceChatApp.stopAudio()">
+                    🔇 停止播放
+                </button>
+                <span class="audio-status" id="audio-status">音频就绪</span>
+            </div>
+            <div class="input-group">
+                <input type="text" id="message-input" class="message-input" placeholder="输入消息或使用语音..." maxlength="500">
+                <button id="send-button" class="send-button">发送</button>
+                <button id="voice-button" class="voice-button">🎤 按住说话</button>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div id="status-indicator" class="status">准备就绪</div>
+            <div id="voice-status" class="voice-status">检查语音服务中...</div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/audio_converter.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice_chat.js') }}"></script>
+</body>
+</html>

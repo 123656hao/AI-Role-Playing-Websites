@@ -1,0 +1,108 @@
+{
+  "characters": [
+    {
+      "id": "socrates",
+      "name": "苏格拉底",
+      "gender": "male",
+      "voice_type": "male",
+      "model_path": "Models/Characters/Socrates",
+      "avatar_texture": "Textures/Avatars/socrates_avatar.png",
+      "animation_controller": "Controllers/MaleCharacterController",
+      "voice_settings": {
+        "pitch": 0.8,
+        "speed": 0.9,
+        "voice_id": "male_wise"
+      }
+    },
+    {
+      "id": "harry_potter",
+      "name": "哈利·波特",
+      "gender": "male",
+      "voice_type": "male",
+      "model_path": "Models/Characters/HarryPotter",
+      "avatar_texture": "Textures/Avatars/harry_potter_avatar.png",
+      "animation_controller": "Controllers/MaleCharacterController",
+      "voice_settings": {
+        "pitch": 1.1,
+        "speed": 1.0,
+        "voice_id": "male_young"
+      }
+    },
+    {
+      "id": "einstein",
+      "name": "阿尔伯特·爱因斯坦",
+      "gender": "male",
+      "voice_type": "male",
+      "model_path": "Models/Characters/Einstein",
+      "avatar_texture": "Textures/Avatars/einstein_avatar.png",
+      "animation_controller": "Controllers/MaleCharacterController",
+      "voice_settings": {
+        "pitch": 0.9,
+        "speed": 0.8,
+        "voice_id": "male_scientist"
+      }
+    },
+    {
+      "id": "shakespeare",
+      "name": "威廉·莎士比亚",
+      "gender": "male",
+      "voice_type": "male",
+      "model_path": "Models/Characters/Shakespeare",
+      "avatar_texture": "Textures/Avatars/shakespeare_avatar.png",
+      "animation_controller": "Controllers/MaleCharacterController",
+      "voice_settings": {
+        "pitch": 0.85,
+        "speed": 0.9,
+        "voice_id": "male_poet"
+      }
+    },
+    {
+      "id": "confucius",
+      "name": "孔子",
+      "gender": "male",
+      "voice_type": "male",
+      "model_path": "Models/Characters/Confucius",
+      "avatar_texture": "Textures/Avatars/confucius_avatar.png",
+      "animation_controller": "Controllers/MaleCharacterController",
+      "voice_settings": {
+        "pitch": 0.75,
+        "speed": 0.8,
+        "voice_id": "male_sage"
+      }
+    },
+    {
+      "id": "marie_curie",
+      "name": "玛丽·居里",
+      "gender": "female",
+      "voice_type": "female",
+      "model_path": "Models/Characters/MarieCurie",
+      "avatar_texture": "Textures/Avatars/marie_curie_avatar.png",
+      "animation_controller": "Controllers/FemaleCharacterController",
+      "voice_settings": {
+        "pitch": 1.2,
+        "speed": 0.9,
+        "voice_id": "female_scientist"
+      }
+    },
+    {
+      "id": "chinese_teacher",
+      "name": "李老师",
+      "gender": "female",
+      "voice_type": "female",
+      "model_path": "Models/Characters/ChineseTeacher",
+      "avatar_texture": "Textures/Avatars/chinese_teacher_avatar.png",
+      "animation_controller": "Controllers/FemaleCharacterController",
+      "voice_settings": {
+        "pitch": 1.1,
+        "speed": 1.0,
+        "voice_id": "female_teacher"
+      }
+    }
+  ],
+  "unity_settings": {
+    "character_scale": 1.0,
+    "animation_blend_time": 0.2,
+    "voice_fade_time": 0.5,
+    "model_quality": "high"
+  }
+}

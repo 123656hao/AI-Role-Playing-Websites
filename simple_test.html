@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单角色测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .character { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { color: red; background: #ffe6e6; padding: 10px; border-radius: 5px; }
+        .success { color: green; background: #e6ffe6; padding: 10px; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>简单角色加载测试</h1>
+    
+    <button onclick="testAPI()">测试API</button>
+    <button onclick="testDirectly()">直接测试</button>
+    
+    <div id="result"></div>
+    <div id="characters"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            const charactersDiv = document.getElementById('characters');
+            
+            resultDiv.innerHTML = '<p>正在测试...</p>';
+            charactersDiv.innerHTML = '';
+            
+            try {
+                console.log('开始API测试');
+                const response = await fetch('/api/characters');
+                console.log('响应状态:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('数据:', data);
+                
+                if (data.success && data.characters) {
+                    resultDiv.innerHTML = `<div class="success">成功加载 ${data.characters.length} 个角色</div>`;
+                    
+                    data.characters.forEach(char => {
+                        const div = document.createElement('div');
+                        div.className = 'character';
+                        div.innerHTML = `
+                            <h3>${char.name}</h3>
+                            <p><strong>ID:</strong> ${char.id}</p>
+                            <p><strong>分类:</strong> ${char.category}</p>
+                            <p><strong>背景:</strong> ${char.background.substring(0, 100)}...</p>
+                        `;
+                        charactersDiv.appendChild(div);
+                    });
+                } else {
+                    resultDiv.innerHTML = `<div class="error">数据格式错误: ${JSON.stringify(data)}</div>`;
+                }
+                
+            } catch (error) {
+                console.error('错误:', error);
+                resultDiv.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+        
+        function testDirectly() {
+            // 直接测试URL
+            window.open('/api/characters', '_blank');
+        }
+    </script>
+</body>
+</html>
