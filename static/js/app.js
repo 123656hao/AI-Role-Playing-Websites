@@ -132,28 +132,51 @@ class AIRoleplayApp {
 
     async loadCharacters() {
         console.log('📥 开始加载角色数据...');
+        console.log('📥 当前URL:', window.location.href);
+        
         try {
             this.showLoading(true);
             
+            console.log('🌐 发送API请求到: /api/characters');
             const response = await fetch('/api/characters');
             console.log('🌐 API响应状态:', response.status);
+            console.log('🌐 API响应头:', response.headers);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('🌐 API响应错误:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
             }
             
             const data = await response.json();
-            console.log('📊 接收到的数据:', data);
+            console.log('📊 接收到的原始数据:', data);
+            console.log('📊 数据类型:', typeof data);
+            console.log('📊 数据结构:', Object.keys(data));
+            console.log('📊 success字段:', data.success, typeof data.success);
+            console.log('📊 characters字段:', data.characters, typeof data.characters, Array.isArray(data.characters));
             
-            if (data.success && data.characters) {
+            if (data.success && data.characters && Array.isArray(data.characters)) {
                 this.characters = data.characters;
                 console.log('👥 成功加载角色数量:', this.characters.length);
-                this.renderCharacters(this.characters);
+                console.log('👥 角色详情:', this.characters);
+                
+                if (this.characters.length > 0) {
+                    console.log('👥 第一个角色:', this.characters[0]);
+                    this.renderCharacters(this.characters);
+                } else {
+                    console.warn('⚠️ 角色数组为空');
+                    this.showEmptyState('没有可用的角色');
+                }
             } else {
-                throw new Error(data.error || '未知错误');
+                console.error('❌ 数据验证失败');
+                console.error('  - success:', data.success);
+                console.error('  - characters:', data.characters);
+                console.error('  - isArray:', Array.isArray(data.characters));
+                throw new Error(data.error || '数据格式错误: success=' + data.success + ', characters=' + typeof data.characters);
             }
         } catch (error) {
             console.error('❌ 加载角色失败:', error);
+            console.error('❌ 错误堆栈:', error.stack);
             this.showError('加载角色失败: ' + error.message);
             
             // 显示错误信息到页面
@@ -162,24 +185,57 @@ class AIRoleplayApp {
                 grid.innerHTML = `
                     <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #e53e3e;">
                         <h3>😔 角色加载失败</h3>
-                        <p>错误信息: ${error.message}</p>
+                        <p><strong>错误信息:</strong> ${error.message}</p>
+                        <p><strong>请尝试:</strong></p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>检查网络连接</li>
+                            <li>确认服务器正在运行</li>
+                            <li>查看浏览器控制台错误</li>
+                        </ul>
+                        <br><br>
                         <button onclick="window.app.loadCharacters()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
                             🔄 重新加载
                         </button>
+                        <button onclick="window.open('/test', '_blank')" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+                            🧪 诊断测试
+                        </button>
                     </div>
                 `;
+            } else {
+                console.error('❌ 找不到角色网格容器 #charactersGrid');
+                console.error('❌ 当前页面所有ID元素:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
             }
         } finally {
             this.showLoading(false);
         }
     }
+    
+    showEmptyState(message) {
+        const grid = document.getElementById('charactersGrid');
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🤔</div>
+                    <h3>${message}</h3>
+                    <p>请检查服务器配置或联系管理员</p>
+                    <button onclick="window.app.loadCharacters()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 1rem;">
+                        🔄 重新加载
+                    </button>
+                </div>
+            `;
+        }
+    }
 
     renderCharacters(characters) {
         console.log('🎨 开始渲染角色卡片...');
+        console.log('🎨 传入的角色数据:', characters);
+        
         const grid = document.getElementById('charactersGrid');
+        console.log('🎨 找到的网格元素:', grid);
         
         if (!grid) {
             console.error('❌ 找不到角色网格容器 #charactersGrid');
+            console.log('❌ 当前DOM中的所有元素ID:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
             return;
         }
         
@@ -187,9 +243,10 @@ class AIRoleplayApp {
         grid.innerHTML = '';
 
         if (!characters || characters.length === 0) {
+            console.log('⚠️ 没有角色数据可显示');
             grid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1;">
-                    <div class="empty-state-icon">🤔</div>
+                <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">🤔</div>
                     <h3>暂无匹配的角色</h3>
                     <p>请尝试调整搜索条件或切换分类筛选</p>
                 </div>
@@ -197,17 +254,19 @@ class AIRoleplayApp {
             return;
         }
 
+        console.log('🎭 开始渲染', characters.length, '个角色');
         characters.forEach((character, index) => {
             console.log(`🎭 渲染角色 ${index + 1}: ${character.name}`);
             try {
                 const card = this.createCharacterCard(character);
                 grid.appendChild(card);
+                console.log(`✅ 角色 ${character.name} 渲染成功`);
             } catch (error) {
                 console.error(`❌ 渲染角色 ${character.name} 失败:`, error);
             }
         });
         
-        console.log('✅ 角色卡片渲染完成');
+        console.log('✅ 角色卡片渲染完成，网格内容:', grid.innerHTML.length, '字符');
     }
 
     createCharacterCard(character) {
@@ -491,17 +550,23 @@ class AIRoleplayApp {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
 
-        // 获取头像
-        let avatar;
+        let avatar, messageClass;
+        
         if (sender === 'user') {
             avatar = '👤';
+            messageClass = 'user';
+        } else if (sender === 'system') {
+            avatar = '🤖';
+            messageClass = 'system';
+            messageDiv.style.cssText += `
+                background: linear-gradient(135deg, #f7fafc, #edf2f7);
+                border-left: 4px solid #667eea;
+                font-style: italic;
+                opacity: 0.9;
+            `;
         } else {
-            const avatarUrl = this.currentCharacter ? this.getCharacterAvatar(this.currentCharacter) : null;
-            if (avatarUrl) {
-                avatar = `<img src="${avatarUrl}" alt="${this.currentCharacter.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.outerHTML='${this.getCharacterEmoji(this.currentCharacter?.category)}'">`;
-            } else {
-                avatar = this.getCharacterEmoji(this.currentCharacter?.category);
-            }
+            avatar = this.getCharacterEmoji(this.currentCharacter?.category);
+            messageClass = 'assistant';
         }
         
         const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -575,6 +640,86 @@ class AIRoleplayApp {
         }, 5000);
     }
 
+    showProcessingStatus(message, type = 'info') {
+        // 移除现有的状态提示
+        this.hideProcessingStatus();
+        
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'processingStatus';
+        statusDiv.className = `alert alert-${type === 'success' ? 'success' : 'info'} fade show`;
+        statusDiv.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9998;
+            max-width: 300px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        `;
+        
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-spinner fa-spin';
+        statusDiv.innerHTML = `
+            <i class="fas ${icon} me-2"></i>
+            ${message}
+        `;
+        
+        document.body.appendChild(statusDiv);
+    }
+
+    hideProcessingStatus() {
+        const statusDiv = document.getElementById('processingStatus');
+        if (statusDiv) {
+            statusDiv.remove();
+        }
+    }
+
+    async loadVoiceConfig(characterId) {
+        try {
+            console.log('🔧 加载语音配置:', characterId);
+            
+            const response = await fetch(`/api/voice/config/${characterId}?voice_type=auto`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.voiceConfig = data.config;
+                console.log('✅ 语音配置加载成功:', this.voiceConfig);
+            } else {
+                console.warn('⚠️ 语音配置加载失败:', data.error);
+                this.voiceConfig = null;
+            }
+        } catch (error) {
+            console.error('❌ 加载语音配置失败:', error);
+            this.voiceConfig = null;
+        }
+    }
+
+    async startRealtimeVoiceChat(characterId) {
+        console.log('🎙️ 启动实时语音对话:', characterId);
+        
+        try {
+            // 获取角色信息
+            const character = this.characters.find(c => c.id === characterId);
+            if (!character) {
+                this.showError('角色不存在');
+                return;
+            }
+            
+            // 检查浏览器支持
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.showError('浏览器不支持语音录制功能');
+                return;
+            }
+            
+            // 跳转到实时语音对话页面
+            const url = `/demo?character=${characterId}`;
+            window.open(url, '_blank');
+            
+        } catch (error) {
+            console.error('❌ 启动实时语音对话失败:', error);
+            this.showError('启动实时语音对话失败: ' + error.message);
+        }
+    }
+
     showCharacterInfo(characterId) {
         const character = this.characters.find(c => c.id === characterId);
         if (!character) return;
@@ -624,9 +769,13 @@ class AIRoleplayApp {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                        <button type="button" class="btn" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;" 
+                        <button type="button" class="btn me-2" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;" 
                                 onclick="window.app.startChat('${character.id}'); bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide();">
-                            <i class="fas fa-comments me-2"></i>开始对话
+                            <i class="fas fa-comments me-2"></i>文字对话
+                        </button>
+                        <button type="button" class="btn" style="background: linear-gradient(135deg, var(--accent-color), #f472b6); color: white;" 
+                                onclick="window.app.startRealtimeVoiceChat('${character.id}'); bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide();">
+                            <i class="fas fa-microphone me-2"></i>语音对话
                         </button>
                     </div>
                 </div>
@@ -650,6 +799,11 @@ class AIRoleplayApp {
         // 检查浏览器支持
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             console.warn('⚠️ 浏览器不支持语音录制');
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.disabled = true;
+                voiceBtn.title = '浏览器不支持语音录制';
+            }
             return;
         }
         
@@ -748,9 +902,15 @@ class AIRoleplayApp {
         try {
             console.log('🎵 处理录音数据...');
             
+            // 显示处理中状态
+            this.showProcessingStatus('正在识别语音...');
+            
+            // 尝试转换为WAV格式
+            const wavBlob = await this.convertToWav(audioBlob);
+            
             // 创建FormData
             const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.webm');
+            formData.append('audio', wavBlob, 'recording.wav');
             
             // 发送到服务器进行语音识别
             const response = await fetch('/api/voice/enhanced/recognize', {
@@ -766,15 +926,107 @@ class AIRoleplayApp {
                 if (messageInput) {
                     messageInput.value = data.text;
                     console.log('✅ 语音识别成功:', data.text);
+                    
+                    // 自动发送消息（可选）
+                    if (data.text.trim()) {
+                        setTimeout(() => {
+                            this.sendMessage();
+                        }, 500);
+                    }
                 }
+                this.hideProcessingStatus();
             } else {
+                this.hideProcessingStatus();
                 this.showError(data.error || '语音识别失败');
             }
             
         } catch (error) {
             console.error('❌ 处理录音失败:', error);
+            this.hideProcessingStatus();
             this.showError('语音处理失败: ' + error.message);
         }
+    }
+
+    async convertToWav(audioBlob) {
+        return new Promise((resolve, reject) => {
+            try {
+                // 创建音频上下文
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 读取音频数据
+                const fileReader = new FileReader();
+                fileReader.onload = async (e) => {
+                    try {
+                        // 解码音频数据
+                        const arrayBuffer = e.target.result;
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // 转换为WAV格式
+                        const wavBuffer = this.audioBufferToWav(audioBuffer);
+                        const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                        
+                        resolve(wavBlob);
+                    } catch (error) {
+                        console.warn('⚠️ 音频转换失败，使用原始格式:', error);
+                        resolve(audioBlob); // 如果转换失败，使用原始格式
+                    }
+                };
+                
+                fileReader.onerror = () => {
+                    console.warn('⚠️ 文件读取失败，使用原始格式');
+                    resolve(audioBlob); // 如果读取失败，使用原始格式
+                };
+                
+                fileReader.readAsArrayBuffer(audioBlob);
+                
+            } catch (error) {
+                console.warn('⚠️ 音频处理失败，使用原始格式:', error);
+                resolve(audioBlob); // 如果处理失败，使用原始格式
+            }
+        });
+    }
+
+    audioBufferToWav(buffer) {
+        const length = buffer.length;
+        const sampleRate = buffer.sampleRate;
+        const numberOfChannels = buffer.numberOfChannels;
+        
+        // 创建WAV文件头
+        const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+        const view = new DataView(arrayBuffer);
+        
+        // WAV文件头
+        const writeString = (offset, string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+        
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numberOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+        view.setUint16(32, numberOfChannels * 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, length * numberOfChannels * 2, true);
+        
+        // 写入音频数据
+        let offset = 44;
+        for (let i = 0; i < length; i++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+        
+        return arrayBuffer;
     }
 
     async loadVoiceConfig(characterId) {
@@ -827,6 +1079,12 @@ class AIRoleplayApp {
                 return;
             }
             
+            // 检查麦克风权限
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.showError('浏览器不支持麦克风访问');
+                return;
+            }
+            
             // 获取实时语音配置
             const response = await fetch('/api/realtime/start', {
                 method: 'POST',
@@ -848,8 +1106,14 @@ class AIRoleplayApp {
             // 连接WebSocket
             await this.connectWebSocket(data.websocket_url);
             
+            // 启动连续语音识别
+            await this.startContinuousRecording();
+            
             this.realtimeMode = true;
             this.updateRealtimeVoiceButton(true);
+            
+            // 显示实时语音状态
+            this.showRealtimeStatus(true);
             
             console.log('✅ 实时语音对话已启动');
             
@@ -863,6 +1127,7 @@ class AIRoleplayApp {
         return new Promise((resolve, reject) => {
             try {
                 this.websocket = new WebSocket(url);
+                this.websocketUrl = url;
                 
                 this.websocket.onopen = () => {
                     console.log('🔌 WebSocket连接成功');
@@ -874,17 +1139,38 @@ class AIRoleplayApp {
                         config: this.voiceConfig || {}
                     }));
                     
+                    // 启动心跳检测
+                    this.startHeartbeat();
+                    
                     resolve();
                 };
                 
                 this.websocket.onmessage = (event) => {
-                    this.handleWebSocketMessage(JSON.parse(event.data));
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('❌ 解析WebSocket消息失败:', error);
+                    }
                 };
                 
-                this.websocket.onclose = () => {
-                    console.log('🔌 WebSocket连接关闭');
-                    this.realtimeMode = false;
-                    this.updateRealtimeVoiceButton(false);
+                this.websocket.onclose = (event) => {
+                    console.log('🔌 WebSocket连接关闭', event.code, event.reason);
+                    this.stopHeartbeat();
+                    
+                    if (this.realtimeMode && event.code !== 1000) {
+                        // 非正常关闭，尝试重连
+                        console.log('🔄 尝试重新连接WebSocket...');
+                        setTimeout(() => {
+                            if (this.realtimeMode) {
+                                this.reconnectWebSocket();
+                            }
+                        }, 3000);
+                    } else {
+                        this.realtimeMode = false;
+                        this.updateRealtimeVoiceButton(false);
+                        this.showRealtimeStatus(false);
+                    }
                 };
                 
                 this.websocket.onerror = (error) => {
@@ -898,12 +1184,62 @@ class AIRoleplayApp {
         });
     }
 
+    async reconnectWebSocket() {
+        try {
+            if (this.websocket) {
+                this.websocket.close();
+            }
+            
+            await this.connectWebSocket(this.websocketUrl);
+            console.log('✅ WebSocket重连成功');
+            
+        } catch (error) {
+            console.error('❌ WebSocket重连失败:', error);
+            if (this.realtimeMode) {
+                setTimeout(() => this.reconnectWebSocket(), 5000);
+            }
+        }
+    }
+
+    startHeartbeat() {
+        this.heartbeatInterval = setInterval(() => {
+            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                this.websocket.send(JSON.stringify({
+                    type: 'ping',
+                    timestamp: Date.now()
+                }));
+            }
+        }, 30000); // 每30秒发送一次心跳
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+
     handleWebSocketMessage(message) {
         console.log('📨 收到WebSocket消息:', message.type);
         
         switch (message.type) {
+            case 'connection_established':
+                console.log('✅ WebSocket连接已建立');
+                break;
+                
             case 'voice_session_started':
                 console.log('✅ 语音会话已开始');
+                this.addMessage('🎤 实时语音对话已启动，请开始说话...', 'system');
+                break;
+                
+            case 'audio_processed':
+                if (message.result && message.result.type === 'speech_recognized') {
+                    const recognizedText = message.result.text;
+                    if (recognizedText && recognizedText.trim()) {
+                        this.addMessage(recognizedText, 'user');
+                        console.log('🎤 识别到语音:', recognizedText);
+                    }
+                }
                 break;
                 
             case 'ai_text_response':
@@ -917,19 +1253,53 @@ class AIRoleplayApp {
                 }
                 break;
                 
+            case 'voice_session_stopped':
+                console.log('✅ 语音会话已停止');
+                this.addMessage('🛑 实时语音对话已结束', 'system');
+                break;
+                
             case 'error':
                 console.error('❌ WebSocket错误:', message.message);
                 this.showError('语音服务错误: ' + message.message);
                 break;
                 
+            case 'pong':
+                console.log('🏓 收到pong响应');
+                break;
+                
             default:
-                console.log('ℹ️ 未处理的消息类型:', message.type);
+                console.log('ℹ️ 未处理的消息类型:', message.type, message);
+        }
+    }
+
+    playAudioUrl(audioUrl) {
+        try {
+            console.log('🔊 播放音频:', audioUrl);
+            
+            const audio = new Audio(audioUrl);
+            audio.volume = 0.8;
+            
+            audio.onloadstart = () => console.log('🔊 开始加载音频');
+            audio.oncanplay = () => console.log('🔊 音频可以播放');
+            audio.onended = () => console.log('🔊 音频播放完成');
+            audio.onerror = (e) => console.error('❌ 音频播放失败:', e);
+            
+            audio.play().catch(error => {
+                console.error('❌ 音频播放失败:', error);
+                this.showError('音频播放失败，请检查浏览器设置');
+            });
+            
+        } catch (error) {
+            console.error('❌ 播放音频失败:', error);
         }
     }
 
     async stopRealtimeVoice() {
         try {
             console.log('🛑 停止实时语音对话...');
+            
+            // 停止连续录音
+            this.stopContinuousRecording();
             
             if (this.websocket) {
                 this.websocket.send(JSON.stringify({
@@ -942,6 +1312,7 @@ class AIRoleplayApp {
             
             this.realtimeMode = false;
             this.updateRealtimeVoiceButton(false);
+            this.showRealtimeStatus(false);
             
             console.log('✅ 实时语音对话已停止');
             
@@ -959,6 +1330,127 @@ class AIRoleplayApp {
             } else {
                 btn.innerHTML = '🎙️ 实时语音对话';
                 btn.style.backgroundColor = '';
+            }
+        }
+    }
+
+    async startContinuousRecording() {
+        try {
+            console.log('🎤 启动连续语音识别...');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                } 
+            });
+            
+            this.continuousRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            this.continuousRecorder.ondataavailable = async (event) => {
+                if (event.data.size > 0 && this.websocket && this.realtimeMode) {
+                    // 转换音频并发送到WebSocket
+                    const wavBlob = await this.convertToWav(event.data);
+                    const arrayBuffer = await wavBlob.arrayBuffer();
+                    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                    
+                    this.websocket.send(JSON.stringify({
+                        type: 'audio_data',
+                        audio_data: base64Audio
+                    }));
+                }
+            };
+            
+            // 每500ms发送一次音频数据
+            this.continuousRecorder.start(500);
+            this.continuousStream = stream;
+            
+            console.log('✅ 连续语音识别已启动');
+            
+        } catch (error) {
+            console.error('❌ 启动连续录音失败:', error);
+            this.showError('无法访问麦克风: ' + error.message);
+        }
+    }
+
+    stopContinuousRecording() {
+        try {
+            if (this.continuousRecorder) {
+                this.continuousRecorder.stop();
+                this.continuousRecorder = null;
+            }
+            
+            if (this.continuousStream) {
+                this.continuousStream.getTracks().forEach(track => track.stop());
+                this.continuousStream = null;
+            }
+            
+            console.log('✅ 连续语音识别已停止');
+            
+        } catch (error) {
+            console.error('❌ 停止连续录音失败:', error);
+        }
+    }
+
+    showRealtimeStatus(active) {
+        let statusDiv = document.getElementById('realtimeStatus');
+        
+        if (active) {
+            if (!statusDiv) {
+                statusDiv = document.createElement('div');
+                statusDiv.id = 'realtimeStatus';
+                statusDiv.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    color: white;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+                    z-index: 1000;
+                    min-width: 250px;
+                    animation: slideInRight 0.3s ease;
+                `;
+                document.body.appendChild(statusDiv);
+            }
+            
+            statusDiv.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <div class="pulse-dot" style="width: 12px; height: 12px; background: #48bb78; border-radius: 50%; margin-right: 0.5rem; animation: pulse 1.5s infinite;"></div>
+                    <strong>实时语音对话中</strong>
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">
+                    🎤 正在监听语音输入<br>
+                    🤖 与 ${this.currentCharacter?.name || '角色'} 对话中
+                </div>
+            `;
+            
+            // 添加CSS动画
+            if (!document.getElementById('realtimeStatusCSS')) {
+                const style = document.createElement('style');
+                style.id = 'realtimeStatusCSS';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+        } else {
+            if (statusDiv) {
+                statusDiv.remove();
             }
         }
     }
@@ -1012,9 +1504,19 @@ class AIRoleplayApp {
         const skillModalTitle = document.getElementById('skillModalTitle');
         const skillModalBody = document.getElementById('skillModalBody');
         
+        if (!skillModal || !skillModalTitle || !skillModalBody) {
+            this.showError('技能模态框元素不存在');
+            return;
+        }
+        
         // 设置技能标题和内容
         const skillInfo = this.getSkillInfo(skillName);
-        skillModalTitle.textContent = skillInfo.title;
+        if (!skillInfo) {
+            this.showError('技能信息不存在');
+            return;
+        }
+        
+        skillModalTitle.innerHTML = `<i class="${skillInfo.icon}"></i> ${skillInfo.title}`;
         skillModalBody.innerHTML = skillInfo.content;
         
         // 显示模态框
@@ -1029,6 +1531,7 @@ class AIRoleplayApp {
         const skillMap = {
             'knowledge_qa': {
                 title: '知识问答',
+                icon: 'fas fa-question-circle',
                 content: `
                     <div class="mb-3">
                         <label class="form-label">请输入您的问题：</label>
@@ -1047,6 +1550,7 @@ class AIRoleplayApp {
             },
             'emotional_support': {
                 title: '情感陪伴',
+                icon: 'fas fa-heart',
                 content: `
                     <div class="mb-3">
                         <label class="form-label">您当前的情绪状态：</label>
@@ -1068,6 +1572,7 @@ class AIRoleplayApp {
             },
             'teaching_guidance': {
                 title: '教学指导',
+                icon: 'fas fa-chalkboard-teacher',
                 content: `
                     <div class="mb-3">
                         <label class="form-label">学习主题：</label>
@@ -1089,6 +1594,7 @@ class AIRoleplayApp {
             },
             'creative_writing': {
                 title: '创作协助',
+                icon: 'fas fa-pen-fancy',
                 content: `
                     <div class="mb-3">
                         <label class="form-label">创作类型：</label>
@@ -1112,16 +1618,16 @@ class AIRoleplayApp {
             },
             'language_practice': {
                 title: '语言练习',
+                icon: 'fas fa-language',
                 content: `
                     <div class="mb-3">
-                        <label class="form-label">目标语言：</label>
+                        <label class="form-label">练习语言：</label>
                         <select class="form-select" id="skillLanguage">
-                            <option value="Chinese">中文</option>
-                            <option value="English">英语</option>
-                            <option value="Japanese">日语</option>
-                            <option value="Korean">韩语</option>
-                            <option value="French">法语</option>
-                            <option value="German">德语</option>
+                            <option value="chinese">中文</option>
+                            <option value="english">英语</option>
+                            <option value="japanese">日语</option>
+                            <option value="korean">韩语</option>
+                            <option value="french">法语</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -1131,12 +1637,18 @@ class AIRoleplayApp {
                             <option value="grammar">语法练习</option>
                             <option value="vocabulary">词汇练习</option>
                             <option value="pronunciation">发音练习</option>
-                            <option value="writing">写作练习</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">练习话题：</label>
-                        <input type="text" class="form-control" id="skillPracticeTopic" placeholder="例如：日常生活、工作、旅行、学习">
+                        <label class="form-label">练习内容：</label>
+                        <textarea class="form-control" id="skillContent" rows="3" placeholder="请输入您想练习的内容..."></textarea>
+                    </div>
+                `
+            }
+        };
+        
+        return skillMap[skillName] || null;
+    }racticeTopic" placeholder="例如：日常生活、工作、旅行、学习">
                     </div>
                 `
             }
@@ -1149,8 +1661,15 @@ class AIRoleplayApp {
     }
 
     async executeSkill() {
-        if (!this.currentSkill || !this.currentCharacter) {
-            this.showError('技能执行失败：缺少必要信息');
+        console.log('⚡ 执行技能:', this.currentSkill);
+        
+        if (!this.currentSkill) {
+            this.showError('请先选择一个技能');
+            return;
+        }
+        
+        if (!this.currentCharacter) {
+            this.showError('请先选择一个角色');
             return;
         }
         
@@ -1163,31 +1682,43 @@ class AIRoleplayApp {
                 return;
             }
             
-            // 发送技能执行请求
-            const response = await fetch(`/api/skills/${this.currentSkill}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(skillData)
-            });
+            // 构建技能消息
+            let skillMessage = this.buildSkillMessage(this.currentSkill, skillData);
             
-            const data = await response.json();
-            
-            if (data.success) {
-                // 关闭技能模态框
-                const skillModal = bootstrap.Modal.getInstance(document.getElementById('skillModal'));
-                skillModal.hide();
-                
-                // 显示技能执行结果
-                this.displaySkillResult(data.result);
-            } else {
-                this.showError('技能执行失败: ' + data.error);
+            // 关闭技能模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('skillModal'));
+            if (modal) {
+                modal.hide();
             }
+            
+            // 发送技能消息
+            await this.sendSkillMessage(skillMessage);
             
         } catch (error) {
             console.error('❌ 技能执行失败:', error);
             this.showError('技能执行失败: ' + error.message);
+        }
+    }
+
+    buildSkillMessage(skillName, skillData) {
+        switch (skillName) {
+            case 'knowledge_qa':
+                return `【知识问答 - ${skillData.type}】${skillData.question}`;
+                
+            case 'emotional_support':
+                return `【情感陪伴 - ${skillData.emotion}】${skillData.message}`;
+                
+            case 'teaching_guidance':
+                return `【教学指导 - ${skillData.level}】主题：${skillData.topic}，目标：${skillData.goal || '基础学习'}`;
+                
+            case 'creative_writing':
+                return `【创作协助 - ${skillData.type}】主题：${skillData.theme}，风格：${skillData.style || '自由发挥'}`;
+                
+            case 'language_practice':
+                return `【语言练习 - ${skillData.language} ${skillData.type}】${skillData.topic}`;
+                
+            default:
+                return `【${skillName}】${JSON.stringify(skillData)}`;
         }
     }
 
@@ -1292,17 +1823,68 @@ class AIRoleplayApp {
             this.playVoice(message);
         }
     }
+
+
+
+    async sendSkillMessage(message) {
+        try {
+            // 添加用户消息到界面
+            this.addMessage(message, 'user');
+            
+            // 发送到服务器
+            const response = await fetch('/api/chat/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    message: message,
+                    skill_type: this.currentSkill 
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.addMessage(data.response, 'assistant');
+                
+                // 自动播放语音回复
+                if (this.voiceConfig) {
+                    this.playVoice(data.response);
+                }
+            } else {
+                this.showError('发送消息失败: ' + data.error);
+            }
+        } catch (error) {
+            console.error('❌ 发送技能消息失败:', error);
+            this.showError('网络错误: ' + error.message);
+        }
+    }
 }
 
 // 确保DOM完全加载后再初始化应用
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('📄 DOM加载完成，初始化应用...');
+console.log('📜 JavaScript文件开始加载，当前DOM状态:', document.readyState);
+
+function initializeApp() {
+    console.log('📄 开始初始化应用，DOM状态:', document.readyState);
+    console.log('📄 检查关键元素是否存在:');
+    console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+    console.log('  - loading:', !!document.getElementById('loading'));
+    
+    try {
         window.app = new AIRoleplayApp();
-    });
+        console.log('✅ 应用实例创建成功');
+    } catch (error) {
+        console.error('❌ 应用初始化失败:', error);
+    }
+}
+
+if (document.readyState === 'loading') {
+    console.log('📄 DOM正在加载，等待DOMContentLoaded事件...');
+    document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     console.log('📄 DOM已就绪，立即初始化应用...');
-    window.app = new AIRoleplayApp();
+    initializeApp();
 }
 
 console.log('📜 JavaScript文件加载完成');

@@ -31,23 +31,21 @@ class AIRoleplayService:
         # 存储会话历史
         self.chat_histories = {}
         
+    def clear_conversation(self, conversation_id: str):
+        """清除对话历史"""
+        if conversation_id in self.chat_histories:
+            del self.chat_histories[conversation_id]
+    
+    def get_conversation_count(self) -> int:
+        """获取当前对话数量"""
+        return len(self.chat_histories)
+    
     def generate_welcome_message(self, character: Dict[str, Any]) -> str:
         """生成角色欢迎消息"""
-        prompt = f"""
-你现在要扮演{character['name']}。
-角色背景：{character['background']}
-性格特点：{character['personality']}
-专业领域：{character['expertise']}
-
-请以{character['name']}的身份，用第一人称生成一段简短的欢迎语，体现角色的性格和特点。
-欢迎语应该：
-1. 符合角色身份和时代背景
-2. 体现角色的说话风格
-3. 简洁有趣，不超过100字
-4. 表达愿意与用户交流的意愿
-"""
-        
         try:
+            prompt = f"""你是{character['name']}，{character['description']}
+请生成一句简短的欢迎语，体现你的性格特点。"""
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[

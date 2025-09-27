@@ -1029,7 +1029,12 @@
                                 <h5 class="mb-0" id="chatCharacterName">角色名称</h5>
                             </div>
                         </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-light" id="voiceSettingsBtn" title="语音设置">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                        </div>
                     </div>
                 </div>
                 <div class="chat-body">
@@ -1091,7 +1096,145 @@
         </div>
     </div>
 
+    <!-- 语音设置模态框 -->
+    <div class="modal fade" id="voiceSettingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-volume-up me-2"></i>语音设置
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-microphone me-1"></i>语音输入
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="voiceInputEnabled" checked>
+                            <label class="form-check-label" for="voiceInputEnabled">
+                                启用语音输入功能
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="directVoiceInput" checked>
+                            <label class="form-check-label" for="directVoiceInput">
+                                直接语音输入模式（语音直接发送，不经过文字输入框）
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            💡 直接模式：语音录制后立即发送给AI<br>
+                            📝 传统模式：语音先转换为文字，可编辑后发送
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-volume-up me-1"></i>语音输出
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="voiceOutputEnabled" checked>
+                            <label class="form-check-label" for="voiceOutputEnabled">
+                                自动播放AI回复语音
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceVolume" class="form-label">
+                            <i class="fas fa-volume-down me-1"></i>语音音量
+                        </label>
+                        <input type="range" class="form-range" id="voiceVolume" min="0" max="1" step="0.1" value="0.8">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">静音</small>
+                            <small class="text-muted">最大</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceSpeed" class="form-label">
+                            <i class="fas fa-tachometer-alt me-1"></i>语音速度
+                        </label>
+                        <input type="range" class="form-range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">慢速</small>
+                            <small class="text-muted">快速</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="testVoiceBtn">
+                            <i class="fas fa-play me-1"></i>测试语音
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="saveVoiceSettingsBtn">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 添加调试信息
+        console.log('🔧 HTML页面JavaScript开始执行');
+        console.log('🔧 当前DOM状态:', document.readyState);
+        console.log('🔧 检查关键元素:');
+        console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+        console.log('  - loading:', !!document.getElementById('loading'));
+        
+        // 监听DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 DOMContentLoaded事件触发');
+            console.log('🔧 再次检查关键元素:');
+            console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+            console.log('  - loading:', !!document.getElementById('loading'));
+        });
+        
+        // 监听页面完全加载
+        window.addEventListener('load', function() {
+            console.log('🔧 页面完全加载完成');
+            console.log('🔧 window.app存在:', !!window.app);
+            
+            // 手动测试API
+            setTimeout(async () => {
+                console.log('🧪 手动测试API...');
+                try {
+                    const response = await fetch('/api/characters');
+                    console.log('🧪 API响应状态:', response.status);
+                    const data = await response.json();
+                    console.log('🧪 API数据:', data);
+                    
+                    if (data.success && data.characters) {
+                        console.log('🧪 角色数量:', data.characters.length);
+                        console.log('🧪 第一个角色:', data.characters[0]);
+                        
+                        // 手动渲染一个角色卡片
+                        const grid = document.getElementById('charactersGrid');
+                        if (grid) {
+                            const char = data.characters[0];
+                            grid.innerHTML = `
+                                <div style="border: 1px solid #ddd; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <h3>${char.name}</h3>
+                                    <p>${char.category}</p>
+                                    <p>${char.background.substring(0, 100)}...</p>
+                                    <button onclick="alert('点击了${char.name}')">开始对话</button>
+                                </div>
+                            `;
+                            console.log('🧪 手动渲染完成');
+                        } else {
+                            console.error('🧪 找不到charactersGrid元素');
+                        }
+                    }
+                } catch (error) {
+                    console.error('🧪 手动测试失败:', error);
+                }
+            }, 2000);
+        });
+    </script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

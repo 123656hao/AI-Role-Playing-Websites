@@ -1,244 +1,374 @@
-# AI角色扮演聊天网站
+# AI语音聊天应用
 
-一个基于Flask和AI的角色扮演聊天网站，支持与历史名人和虚拟角色进行智能对话，集成了语音识别和语音合成功能。
+一个基于Flask和百度语音识别的AI角色扮演聊天应用，支持语音识别、语音合成和实时对话。
 
 ## 🌟 主要特性
 
-- 🎭 **多角色对话**: 与苏格拉底、爱因斯坦、居里夫人、莎士比亚等历史名人对话
-- 🎤 **语音交互**: 支持语音输入和语音输出，提供沉浸式对话体验
-- 🧠 **AI技能系统**: 知识问答、情感陪伴、教学指导、创作协助、语言练习等多种技能
-- 🔊 **实时语音**: 集成字节跳动语音API，支持实时语音对话
-- 📱 **响应式设计**: 适配桌面和移动设备
-- 🎨 **美观界面**: 现代化的UI设计，流畅的用户体验
+- 🎤 **语音识别**: 基于百度语音识别API，支持实时语音转文字
+- 🔊 **语音合成**: 基于百度语音合成API，AI回复可转换为语音
+- 🤖 **AI角色扮演**: 支持多个预设AI角色，包括苏格拉底、爱因斯坦、哈利·波特等
+- 💬 **实时通信**: 基于WebSocket的实时聊天体验
+- ⚡ **实时语音对话**: 全新的连续语音交互模式，支持自然对话流程
+- 🎯 **智能静音检测**: 自动识别语音停顿，无需手动控制
+- 🎨 **现代界面**: 响应式设计，支持移动端和桌面端
+- 🔄 **音频格式转换**: 自动处理不同音频格式，确保兼容性
+- 🎵 **音频可视化**: 实时显示语音输入的音频波形
 
 ## 🚀 快速开始
 
-### 环境要求
+### 1. 环境准备
 
-- Python 3.8+
-- Flask 2.3+
-- 现代浏览器（支持WebRTC）
+```bash
+# 克隆项目
+git clone <repository-url>
+cd ai-voice-chat
 
-### 安装步骤
+# 创建虚拟环境（推荐）
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate     # Windows
 
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/123656hao/AI-Role-Playing-Websites.git
-   cd AI-Role-Playing-Websites
-   ```
+# 安装依赖
+pip install -r requirements.txt
+```
 
-2. **安装依赖**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. 配置API密钥
 
-3. **配置环境变量**
-   
-   复制 `.env.example` 到 `.env` 并填入你的API密钥：
-   ```bash
-   cp .env.example .env
-   ```
-   
-   编辑 `.env` 文件：
-   ```env
-   # AI API配置
-   OPENAI_API_KEY=your_api_key_here
-   OPENAI_API_BASE=https://ark.cn-beijing.volces.com/api/v3
-   OPENAI_MODEL=doubao-seed-1-6-250615
-   ```
+复制 `.env.example` 为 `.env` 并填入你的API密钥：
 
-4. **配置语音API**
-   
-   编辑 `config/voice_settings.json`，填入字节跳动语音API配置：
-   ```json
-   {
-     "api_config": {
-       "app_id": "your_app_id",
-       "access_key": "your_access_key",
-       "app_key": "your_app_key"
-     }
-   }
-   ```
+```bash
+cp .env.example .env
+```
 
-5. **运行应用**
-   ```bash
-   python app.py
-   ```
+编辑 `.env` 文件：
 
-6. **访问网站**
-   
-   打开浏览器访问 `http://localhost:5000`
+```env
+# Flask应用配置
+SECRET_KEY=your-secret-key-here
+
+# AI服务配置（豆包/OpenAI）
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+OPENAI_MODEL=doubao-seed-1-6-250615
+
+# 百度语音API配置
+BAIDU_API_KEY=your_baidu_api_key_here
+BAIDU_SECRET_KEY=your_baidu_secret_key_here
+```
+
+### 3. 获取API密钥
+
+#### 百度语音识别API
+1. 访问 [百度AI开放平台](https://ai.baidu.com/)
+2. 注册账号并创建应用
+3. 获取 API Key 和 Secret Key
+
+#### AI服务API（豆包）
+1. 访问 [火山引擎](https://www.volcengine.com/)
+2. 开通豆包大模型服务
+3. 获取 API Key
+
+### 4. 启动应用
+
+```bash
+# 方式1: 启动实时语音对话（推荐）
+python start_realtime_voice.py
+
+# 方式2: 直接启动主应用
+python voice_app.py
+
+# 方式3: 测试实时语音功能
+python test_realtime_voice.py
+```
+
+### 5. 访问应用
+
+- **实时语音对话**: http://localhost:5000/realtime （新功能）
+- **标准语音聊天**: http://localhost:5000/
+
+## 📱 使用说明
+
+### 🎤 实时语音对话（新功能）
+1. 访问 http://localhost:5000/realtime
+2. 选择一个AI角色
+3. 点击麦克风按钮开始对话
+4. 清晰地说出您的问题
+5. 系统自动检测语音结束并识别
+6. 获得AI的文字和语音回复
+7. 开启连续模式进行自然对话
+
+### 语音聊天（标准模式）
+1. 选择一个AI角色
+2. 点击并按住"🎤 按住说话"按钮
+3. 说话完毕后松开按钮
+4. 系统会自动识别语音并生成AI回复
+
+### 文字聊天
+1. 选择一个AI角色
+2. 在输入框中输入消息
+3. 点击"发送"按钮或按回车键
+
+### 支持的音频格式
+- WAV (推荐)
+- MP3
+- OGG
+- WebM (自动转换)
+- M4A
+- FLAC
+- AMR
+
+## 🛠️ 技术架构
+
+### 后端技术
+- **Flask**: Web框架
+- **Flask-SocketIO**: WebSocket实时通信
+- **百度语音识别API**: 语音转文字
+- **百度语音合成API**: 文字转语音
+- **OpenAI API**: AI对话生成
+
+### 前端技术
+- **HTML5**: 现代Web标准
+- **CSS3**: 响应式设计和动画
+- **JavaScript**: 交互逻辑和音频处理
+- **WebRTC**: 浏览器音频录制
+- **Socket.IO**: 实时通信
+
+### 音频处理
+- **pydub**: Python音频处理
+- **Web Audio API**: 浏览器端音频转换
+- **自定义音频转换器**: 格式兼容性处理
 
 ## 📁 项目结构
 
 ```
-AI-Role-Playing-Websites/
-├── app.py                      # Flask主应用
-├── requirements.txt            # Python依赖
-├── .env.example               # 环境变量示例
-├── config/
-│   └── voice_settings.json   # 语音配置
-├── services/
-│   ├── ai_service.py         # AI对话服务
-│   ├── voice_service.py      # 语音处理服务
-│   ├── voice_config_service.py # 语音配置服务
-│   ├── voice_chat_client.py  # 语音聊天客户端
-│   └── character_service.py  # 角色管理服务
-├── templates/
-│   └── index.html            # 主页模板
-├── static/
-│   ├── js/
-│   │   └── app.js           # 前端JavaScript
-│   └── css/
-├── data/
-│   └── characters.json      # 角色数据
-├── examples/                # 使用示例
-├── logs/                   # 日志文件
-└── docs/                   # 文档
+ai-voice-chat/
+├── services/              # 服务层
+│   ├── ai_service.py     # AI对话服务
+│   ├── baidu_voice_service.py  # 百度语音识别
+│   ├── baidu_tts_service.py    # 百度语音合成
+│   └── character_service.py    # 角色管理
+├── templates/            # HTML模板
+│   └── voice_chat.html  # 主界面
+├── static/              # 静态资源
+│   ├── js/             # JavaScript文件
+│   └── audio/          # 音频文件存储
+├── utils/              # 工具类
+│   └── audio_converter.py  # 音频转换工具
+├── data/               # 数据文件
+│   └── characters.json # 角色数据
+├── voice_app.py        # 主应用（完整版）
+├── app_clean.py        # 简洁版应用
+├── start_voice_chat.py # 启动脚本
+└── requirements.txt    # 依赖包
 ```
 
-## 🎭 支持的角色
+## 🎭 预设角色
 
-| 角色 | 分类 | 特色 |
-|------|------|------|
-| 苏格拉底 | 哲学家 | 善于提问，引导思考 |
-| 爱因斯坦 | 科学家 | 物理学专家，富有想象力 |
-| 居里夫人 | 科学家 | 化学物理学家，坚韧不拔 |
-| 莎士比亚 | 文学家 | 戏剧诗歌大师，语言优美 |
-| 孔子 | 哲学家 | 儒家思想，教育智慧 |
-| 哈利·波特 | 虚拟角色 | 魔法世界，年轻活力 |
+- **苏格拉底**: 古希腊哲学家，擅长哲学思辨
+- **爱因斯坦**: 物理学家，科学思维和创新
+- **哈利·波特**: 魔法世界的冒险者
+- **莎士比亚**: 文学大师，诗歌和戏剧
+- **孔子**: 儒家思想家，教育和道德
+- **玛丽·居里**: 科学家，坚持和突破
+- **李老师**: 中文教师，语言学习
 
-## 🛠️ 技术栈
+## 🔧 故障排除
 
-### 后端
-- **Flask**: Web框架
-- **OpenAI API**: AI对话生成
-- **字节跳动语音API**: 语音识别和合成
-- **SpeechRecognition**: 本地语音识别
-- **pyttsx3**: 本地语音合成
+### 语音识别不工作
+1. 检查百度API密钥配置
+2. 确认麦克风权限已授权
+3. 检查网络连接
+4. 查看浏览器控制台错误信息
 
-### 前端
-- **HTML5/CSS3**: 现代Web标准
-- **JavaScript ES6+**: 前端交互
-- **Bootstrap 5**: UI框架
-- **WebRTC**: 语音录制
-- **WebSocket**: 实时通信
+### 音频格式问题
+1. 推荐使用WAV格式录音
+2. 确保采样率为16kHz
+3. 检查音频文件大小（<4MB）
 
-## 🎤 语音功能
-
-### 语音识别
-- 支持中文和英文语音识别
-- 优先使用字节跳动ASR API
-- 本地SpeechRecognition作为备用
-
-### 语音合成
-- 字节跳动TTS API提供高质量语音
-- 支持多种音色（男声/女声）
-- 角色个性化语音配置
-
-### 实时语音对话
-- WebSocket实时通信
-- 低延迟语音交互
-- 自动语音播放控制
-
-## 🔧 配置说明
-
-### AI配置
-在 `.env` 文件中配置AI服务：
-```env
-OPENAI_API_KEY=your_doubao_api_key
-OPENAI_API_BASE=https://ark.cn-beijing.volces.com/api/v3
-OPENAI_MODEL=doubao-seed-1-6-250615
-```
-
-### 语音配置
-在 `config/voice_settings.json` 中配置语音服务：
-```json
-{
-  "api_config": {
-    "base_url": "wss://openspeech.bytedance.com/api/v3/realtime/dialogue",
-    "app_id": "your_app_id",
-    "access_key": "your_access_key",
-    "app_key": "your_app_key"
-  },
-  "voice_speakers": {
-    "male": "zh_male_yunzhou_jupiter_bigtts",
-    "female": "zh_female_aojiaonvyou_tob"
-  }
-}
-```
-
-## 📚 使用指南
-
-### 基础对话
-1. 选择想要对话的角色
-2. 点击"开始对话"
-3. 输入文字或使用语音输入
-4. 享受与AI角色的智能对话
-
-### 语音功能
-1. 点击麦克风图标开始录音
-2. 说话后点击停止录音
-3. 系统自动识别语音并转为文字
-4. AI回复可自动播放语音
-
-### 技能系统
-- **知识问答**: 向角色提问专业问题
-- **情感陪伴**: 获得情感支持和安慰
-- **教学指导**: 学习特定主题知识
-- **创作协助**: 协助文学创作
-- **语言练习**: 多语言学习练习
-
-## 🔍 故障排除
-
-### 常见问题
-
-1. **语音功能不可用**
-   - 检查浏览器麦克风权限
-   - 确认语音API配置正确
-   - 尝试使用HTTPS访问
-
-2. **AI回复异常**
-   - 检查API密钥配置
-   - 确认网络连接正常
-   - 查看控制台错误信息
-
-3. **角色加载失败**
-   - 检查 `data/characters.json` 文件
-   - 确认文件格式正确
-   - 重启应用服务
-
-### 日志查看
-应用日志保存在 `logs/` 目录下，可以查看详细的错误信息。
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request！
-
-1. Fork本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启Pull Request
+### AI回复异常
+1. 检查OpenAI API密钥配置
+2. 确认API额度充足
+3. 检查网络连接
 
 ## 📄 许可证
 
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+MIT License - 详见 [LICENSE](LICENSE) 文件
+- 🌐 **实时通信**: WebSocket支持实时语音交流
 
-## 🙏 致谢
+## 🚀 快速开始
 
-- [OpenAI](https://openai.com/) - AI对话技术
-- [字节跳动](https://www.volcengine.com/) - 语音技术支持
-- [Flask](https://flask.palletsprojects.com/) - Web框架
-- [Bootstrap](https://getbootstrap.com/) - UI框架
+### 环境要求
+- Python 3.8+
+- 网络连接（用于AI API调用）
 
-## 📞 联系方式
+### 安装运行
 
-如有问题或建议，请通过以下方式联系：
+1. **克隆项目**
+```bash
+git clone <repository-url>
+cd ai_roleplay_project
+```
 
-- GitHub Issues: [提交问题](https://github.com/123656hao/AI-Role-Playing-Websites/issues)
-- 项目主页: [AI角色扮演聊天网站](https://github.com/123656hao/AI-Role-Playing-Websites)
+2. **安装依赖**
+```bash
+pip install -r requirements.txt
+```
 
----
+3. **配置环境**
+```bash
+# 复制环境配置文件
+cp .env.example .env
+# 编辑 .env 文件，填入你的API密钥
+```
 
-⭐ 如果这个项目对你有帮助，请给它一个星标！
+4. **运行应用**
+```bash
+# 标准启动
+python app.py
+
+# 或使用启动脚本
+python run.py
+
+# 测试Web实时语音识别
+python start_web_realtime_test.py
+```
+
+5. **访问应用**
+- 主应用: `http://localhost:5000`
+- Web实时语音演示: `http://localhost:5000/web_realtime_demo.html`
+
+## ⚙️ 环境配置
+
+在 `.env` 文件中配置：
+
+```env
+# AI服务配置
+DOUBAO_API_KEY=your_doubao_api_key
+DOUBAO_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+
+# 应用配置
+SECRET_KEY=your_secret_key
+DEBUG=False
+PORT=5000
+```
+
+## 📁 项目结构
+
+```
+ai_roleplay_project/
+├── app.py                          # 主应用文件
+├── requirements.txt                # 依赖包
+├── .env                           # 环境配置
+├── services/                      # 核心服务
+│   ├── ai_service.py             # AI对话服务
+│   ├── enhanced_voice_service.py  # 增强语音服务
+│   ├── chinese_voice_service.py   # 中文语音识别
+│   ├── character_service.py       # 角色管理
+│   └── websocket_handler.py       # WebSocket处理
+├── templates/                     # 页面模板
+│   ├── index.html                # 主页面
+│   └── realtime_demo.html        # 实时语音演示
+├── static/                       # 静态资源
+│   ├── css/
+│   ├── js/
+│   └── audio/
+└── data/                         # 数据文件
+    └── characters.json           # 角色数据
+```
+
+## 🎯 使用说明
+
+### 基本对话
+1. 选择AI角色
+2. 开始文字或语音对话
+3. 享受智能交流体验
+
+### 语音功能
+- **语音输入**: 点击麦克风按钮，说中文即可识别
+- **语音输出**: AI回复自动播放语音
+- **实时对话**: 支持连续语音交流
+
+### 角色特色
+- **哲学家**: 深度思考，人生哲理
+- **科学家**: 科学知识，技术解答  
+- **文学家**: 文学创作，诗词鉴赏
+- **历史学家**: 历史文化，古今传承
+
+## 🔧 核心API
+
+### 对话接口
+- `POST /api/chat/message` - 文字消息
+- `POST /api/chat/voice_message` - 语音消息
+
+### 语音接口  
+- `POST /api/voice/enhanced/recognize` - 中文语音识别
+- `POST /api/voice/enhanced/synthesize` - 语音合成
+
+### 角色接口
+- `GET /api/characters` - 获取角色列表
+- `POST /api/chat/start` - 开始对话
+
+## 🛠️ 技术特点
+
+### 语音识别优化
+- 支持多种音频格式（WebM、OGG、MP3、WAV等）
+- 自动音频格式转换和RIFF头修复
+- 优先使用Google中文识别API
+- 音频预处理和噪音过滤
+
+### 中文语音处理
+- 针对中文语音特点优化
+- 音量标准化和动态范围压缩
+- 静音检测和自然停顿保留
+- 多引擎识别结果对比
+
+### 实时语音识别
+- **Web Audio API + WebSocket方案**: 基于浏览器端音频流的实时识别
+- **连续语音流处理**: 支持长时间连续语音输入
+- **低延迟识别**: 实时音频数据传输和处理
+- **多格式兼容**: 自动处理不同浏览器的音频格式
+
+## 🐛 故障排除
+
+### 语音识别问题
+```bash
+# 检查音频格式
+# 确认麦克风权限
+# 验证网络连接
+```
+
+### RIFF格式错误
+- 项目已自动修复音频格式问题
+- 支持多种输入格式自动转换
+- 生成标准WAV文件
+
+### 依赖安装
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
+```
+
+## 📝 更新日志
+
+### v2.1 (当前版本)
+- 🆕 **全新Web实时语音识别方案**
+- 🎤 基于Web Audio API + WebSocket的实时语音流处理
+- ⚡ 低延迟音频传输和识别
+- 🔄 支持连续语音输入和实时结果反馈
+- 🌐 兼容现代浏览器的音频处理
+
+### v2.0
+- ✅ 修复RIFF格式错误
+- ✅ 优化中文语音识别准确性
+- ✅ 简化项目结构，删除冗余文件
+- ✅ 改进音频处理流程
+- ✅ 增强错误处理机制
+
+## 📄 许可证
+
+MIT License
+
+## 🤝 贡献
+
+欢迎提交Issue和Pull Request来改进项目！
