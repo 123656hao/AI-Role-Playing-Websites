@@ -1235,5 +1235,7 @@ document.head.appendChild(style);    // 语音配置
     }
 }
 
+
+
 // 初始化应用
 const app = new AIRoleplayApp();
