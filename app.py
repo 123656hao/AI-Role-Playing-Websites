@@ -431,9 +431,7 @@ if __name__ == '__main__':
     # 创建必要目录
     os.makedirs('static/audio', exist_ok=True)
     os.makedirs('data', exist_ok=True)
-<<<<<<< HEAD
     app.run(debug=False, host='0.0.0.0', port=5000)
-=======
     os.makedirs('logs', exist_ok=True)
     
     # 启动WebSocket服务器
@@ -442,4 +440,3 @@ if __name__ == '__main__':
     # 启动Flask应用
     print("🚀 启动Flask应用...")
     app.run(debug=True, host='0.0.0.0', port=5000)
->>>>>>> fce8de6bdc3680f50f4d824e1aab1cd2903e2be6
