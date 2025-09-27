@@ -67,6 +67,18 @@ class VoiceChatApp {
             this.displayMessage(data.response, 'ai', data.character, '', data.audio_url);
         });
         
+        this.socket.on('recognition_result', (data) => {
+            // 更新最后一条用户消息，显示识别结果
+            const messages = this.chatContainer.querySelectorAll('.message.user');
+            if (messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                const messageContent = lastMessage.querySelector('.message-content');
+                if (messageContent && messageContent.textContent.includes('正在识别语音')) {
+                    messageContent.innerHTML = '🎤 ' + data.text;
+                }
+            }
+        });
+        
         this.socket.on('error', (data) => {
             this.showError(data.message);
         });
@@ -283,6 +295,12 @@ class VoiceChatApp {
     
     async processRecording() {
         try {
+            // 检查是否选择了角色
+            if (!this.currentCharacter) {
+                this.showError('请先选择一个角色');
+                return;
+            }
+            
             let audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
             let filename = 'recording.webm';
             
@@ -305,34 +323,21 @@ class VoiceChatApp {
                 }
             }
             
-            // 创建FormData
-            const formData = new FormData();
-            formData.append('audio', audioBlob, filename);
-            
-            // 发送到服务器进行语音识别
-            const response = await fetch('/api/voice/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                const recognizedText = data.text;
+            // 将音频转换为base64
+            const reader = new FileReader();
+            reader.onload = () => {
+                const audioBase64 = reader.result;
                 
-                // 显示识别的文字
-                this.displayMessage(recognizedText, 'user', null, '🎤 ');
+                // 显示用户语音消息占位符
+                this.displayMessage('🎤 正在识别语音...', 'user');
                 
-                // 发送给AI
-                this.socket.emit('chat_message', {
-                    message: recognizedText,
+                // 通过WebSocket发送语音数据和角色ID
+                this.socket.emit('voice_message', {
+                    audio: audioBase64,
                     character_id: this.currentCharacter
                 });
-                
-                this.updateStatus('语音识别成功', 'success');
-            } else {
-                this.showError('语音识别失败: ' + data.error);
-            }
+            };
+            reader.readAsDataURL(audioBlob);
             
         } catch (error) {
             this.showError('处理录音失败: ' + error.message);

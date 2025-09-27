@@ -536,16 +536,15 @@
             
             socket.on('connect', () => {
                 console.log('Socket连接成功');
+                // 移除自动添加的欢迎消息，避免与后端消息重复
                 document.getElementById('chatContainer').innerHTML = `
-                    <div class="message">
-                        <div class="message-avatar">${getCharacterEmoji(characterId)}</div>
-                        <div class="message-content">你好！我是${characterName}，很高兴与你交流。请问有什么我可以帮助你的吗？</div>
-                    </div>
+                    <div class="loading">连接成功，开始对话...</div>
                 `;
             });
             
+            // 只监听chat_response事件，避免重复回答
             socket.on('chat_response', (data) => {
-                console.log('收到AI回复:', data);
+                console.log('收到虚拟人物回复:', data);
                 addMessage(data.response, 'ai', data.character.name, data.audio_url);
             });
             
@@ -557,18 +556,6 @@
                 console.log('语音识别结果:', data.text);
                 document.getElementById('messageInput').value = data.text;
                 updateVoiceStatus('识别完成: ' + data.text);
-            });
-            
-            socket.on('ai_response', (data) => {
-                console.log('AI文字回复:', data.text);
-                addMessage(data.text, 'ai', characterName);
-            });
-            
-            socket.on('tts_result', (data) => {
-                console.log('收到语音合成结果');
-                if (data.audio) {
-                    playAudio(data.audio);
-                }
             });
             
             socket.on('status', (data) => {
@@ -649,8 +636,9 @@
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
             
-            // 如果是AI消息且有音频，自动播放
+            // 如果是虚拟人物消息且有音频，自动播放语音
             if (sender === 'ai' && audioUrl) {
+                console.log('准备播放虚拟人物语音:', audioUrl);
                 setTimeout(() => {
                     playAudio(audioUrl);
                 }, 500);
@@ -876,7 +864,8 @@
 
                     // 发送到服务器进行语音识别
                     socket.emit('voice_message', {
-                        audio: audioBase64
+                        audio: audioBase64,
+                        character_id: currentCharacter
                     });
 
                     updateVoiceStatus('正在识别语音...');
@@ -988,7 +977,8 @@
                     
                     // 发送到服务器进行语音识别
                     socket.emit('voice_message', {
-                        audio: audioBase64
+                        audio: audioBase64,
+                        character_id: currentCharacter
                     });
                     
                     updateVoiceStatus('正在识别语音...');

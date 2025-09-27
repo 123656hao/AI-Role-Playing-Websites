@@ -152,6 +152,16 @@ BAIDU_SECRET_KEY=your_baidu_secret_key_here
 
 ## 🔧 最新修复
 
+### 重复回复问题修复 (已解决)
+我们修复了主页面语音对话中出现重复AI回复的问题：
+
+1. **事件监听器重复**: 移除了重复的 `ai_response` 和 `tts_result` 事件监听器
+2. **后端事件统一**: 统一使用 `chat_response` 事件发送AI回复
+3. **音频处理优化**: 音频URL现在通过统一事件一起发送
+4. **用户体验改善**: 确保每个用户消息只产生一个AI回复
+
+现在与虚拟人物对话时只会看到一个AI回复，不再有重复显示问题。
+
 ### 实时语音识别问题修复 (已解决)
 我们修复了实时语音聊天中语音识别不正确的问题：
 
@@ -167,8 +177,9 @@ BAIDU_SECRET_KEY=your_baidu_secret_key_here
 ### 自助诊断
 1. 运行测试脚本: `python test_realtime_voice.py`
 2. 运行语音识别测试: `python test_voice_recognition.py`
-3. 查看浏览器控制台错误信息
-4. 检查服务端日志输出
+3. 运行重复回复测试: `python test_duplicate_response.py`
+4. 查看浏览器控制台错误信息
+5. 检查服务端日志输出
 
 ### 常见错误代码
 - **400**: 请求参数错误

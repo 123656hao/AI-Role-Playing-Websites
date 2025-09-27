@@ -620,8 +620,10 @@ def handle_voice_message(data):
                 emit('error', {'message': '语音数据格式错误'})
                 return
         
-        # 获取音频数据
+        # 获取音频数据和角色ID
         audio_data = data.get('audio')
+        character_id = data.get('character_id', 'assistant')  # 获取角色ID
+        
         if not audio_data:
             emit('error', {'message': '没有收到音频数据'})
             return
@@ -672,27 +674,42 @@ def handle_voice_message(data):
             logger.info(f"语音识别结果: {user_text}")
             emit('recognition_result', {'text': user_text})
             
-            # AI对话 - 使用默认角色
-            emit('status', {'message': 'AI正在思考...', 'type': 'info'})
-            default_character = {
-                'name': 'AI助手',
-                'description': '智能语音助手',
-                'background': '我是一个智能AI助手，专门为用户提供语音交互服务',
-                'personality': '友善、耐心、乐于助人',
-                'expertise': '语音识别、自然语言处理、智能对话'
-            }
-            ai_response = ai_service.generate_response(default_character, user_text, request.sid)
+            # 获取角色信息
+            if character_service:
+                character = character_service.get_character_by_id(character_id)
+            else:
+                # 从文件加载角色
+                characters_list = load_characters()
+                character = None
+                for char in characters_list:
+                    if char['id'] == character_id:
+                        character = char
+                        break
+            
+            # 如果没找到角色，使用默认角色
+            if not character:
+                character = {
+                    'id': 'assistant',
+                    'name': 'AI助手',
+                    'description': '智能语音助手',
+                    'background': '我是一个智能AI助手，专门为用户提供语音交互服务',
+                    'personality': '友善、耐心、乐于助人',
+                    'expertise': '语音识别、自然语言处理、智能对话'
+                }
+            
+            # AI对话 - 使用选定的角色
+            emit('status', {'message': f'{character["name"]}正在思考...', 'type': 'info'})
+            ai_response = ai_service.generate_response(character, user_text, request.sid)
             
             if not ai_response:
                 emit('error', {'message': 'AI服务响应失败'})
                 return
             
             logger.info(f"AI回复: {ai_response}")
-            emit('ai_response', {'text': ai_response})
             
             # 语音合成
             emit('status', {'message': '正在生成语音...', 'type': 'info'})
-            tts_result = tts_service.text_to_speech(ai_response)
+            tts_result = tts_service.text_to_speech(ai_response, character)
             
             # 处理TTS结果的兼容性 - 支持字符串和字典两种格式
             if tts_result:
@@ -702,6 +719,7 @@ def handle_voice_message(data):
                 if isinstance(tts_result, dict):
                     if tts_result.get('success'):
                         audio_path = tts_result.get('audio_path')
+                        audio_url = tts_result.get('audio_url')
                     else:
                         emit('error', {'message': f'语音合成失败: {tts_result.get("error", "未知错误")}'})
                         emit('status', {'message': '处理完成', 'type': 'success'})
@@ -709,30 +727,27 @@ def handle_voice_message(data):
                 
                 # 如果返回的是字符串格式（旧版本兼容）
                 elif isinstance(tts_result, str):
+                    audio_url = tts_result
                     # 从URL推导出文件路径
                     if tts_result.startswith('/static/audio/'):
                         filename = tts_result.replace('/static/audio/', '')
                         audio_path = os.path.join('static', 'audio', filename)
                 
-                # 处理音频文件
-                if audio_path and os.path.exists(audio_path):
-                    with open(audio_path, 'rb') as f:
-                        audio_base64 = base64.b64encode(f.read()).decode('utf-8')
-                    
-                    emit('tts_result', {
-                        'audio': f"data:audio/wav;base64,{audio_base64}",
-                        'text': ai_response
-                    })
-                    
-                    # 清理临时文件
-                    try:
-                        os.unlink(audio_path)
-                    except:
-                        pass
-                else:
-                    emit('error', {'message': '语音合成文件生成失败'})
+                # 发送统一的chat_response事件，包含文字和音频
+                emit('chat_response', {
+                    'response': ai_response,
+                    'character': character,
+                    'audio_url': audio_url,
+                    'timestamp': datetime.now().isoformat()
+                })
             else:
-                emit('error', {'message': '语音合成失败'})
+                # 语音合成失败，只发送文字回复
+                emit('chat_response', {
+                    'response': ai_response,
+                    'character': character,
+                    'audio_url': None,
+                    'timestamp': datetime.now().isoformat()
+                })
             
             emit('status', {'message': '处理完成', 'type': 'success'})
             
@@ -774,7 +789,8 @@ def handle_text_message(data):
             return
         
         logger.info(f"AI回复: {ai_response}")
-        emit('ai_response', {'text': ai_response})
+        # 使用统一的chat_response格式
+        # emit('ai_response', {'text': ai_response})
         
         # 语音合成
         emit('status', {'message': '正在生成语音...', 'type': 'info'})
@@ -802,23 +818,35 @@ def handle_text_message(data):
             
             # 处理音频文件
             if audio_path and os.path.exists(audio_path):
-                with open(audio_path, 'rb') as f:
-                    audio_base64 = base64.b64encode(f.read()).decode('utf-8')
+                # 生成音频URL
+                filename = os.path.basename(audio_path)
+                audio_url = f"/static/audio/{filename}"
                 
-                emit('tts_result', {
-                    'audio': f"data:audio/wav;base64,{audio_base64}",
-                    'text': ai_response
+                # 发送统一的chat_response事件
+                emit('chat_response', {
+                    'response': ai_response,
+                    'character': default_character,
+                    'audio_url': audio_url,
+                    'timestamp': datetime.now().isoformat()
                 })
                 
-                # 清理临时文件
-                try:
-                    os.unlink(audio_path)
-                except:
-                    pass
+                # 不删除临时文件，让前端可以访问
             else:
-                emit('error', {'message': '语音合成文件生成失败'})
+                # 即使语音合成失败，也要发送文字回复
+                emit('chat_response', {
+                    'response': ai_response,
+                    'character': default_character,
+                    'audio_url': None,
+                    'timestamp': datetime.now().isoformat()
+                })
         else:
-            emit('error', {'message': '语音合成失败'})
+            # 语音合成失败，只发送文字回复
+            emit('chat_response', {
+                'response': ai_response,
+                'character': default_character,
+                'audio_url': None,
+                'timestamp': datetime.now().isoformat()
+            })
         
         emit('status', {'message': '处理完成', 'type': 'success'})
         
