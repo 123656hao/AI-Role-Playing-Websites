@@ -47,6 +47,7 @@ this.socket.emit('voice_message', {
     character_id: this.currentCharacter  // 传递角色ID
 });
 
+
 // 添加语音识别结果处理
 this.socket.on('recognition_result', (data) => {
     // 更新最后一条用户消息，显示识别结果
