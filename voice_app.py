@@ -4,7 +4,6 @@
 AI语音聊天应用
 支持语音识别、AI对话和语音合成
 """
-
 import os
 import sys
 import logging
