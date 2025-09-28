@@ -369,6 +369,249 @@ pip install -r requirements.txt --force-reinstall
 
 MIT License
 
+## 👥 项目分工
+
+### 🔧 后端 & 工作流负责人
+**主要职责：**
+- **核心服务开发**
+  - AI对话服务 (`services/ai_service.py`)
+  - 语音识别服务 (`services/baidu_voice_service.py`)
+  - 语音合成服务 (`services/baidu_tts_service.py`)
+  - 角色管理服务 (`services/character_service.py`)
+  - WebSocket处理器 (`services/websocket_handler.py`)
+
+- **后端架构设计**
+  - Flask应用架构 (`voice_app.py`, `app.py`)
+  - API接口设计和实现
+  - 数据库设计和数据管理
+  - 实时语音处理逻辑 (`services/realtime_voice_handler.py`)
+
+- **工作流管理**
+  - 项目构建和部署流程
+  - 环境配置管理 (`.env`, `requirements.txt`)
+  - 代码质量控制和测试
+  - 文档维护 (`README.md`, `USAGE_GUIDE.md`)
+
+- **系统集成**
+  - 第三方API集成（百度语音、AI模型）
+  - 音频处理工具 (`utils/audio_converter.py`)
+  - 端口管理和服务监控 (`utils/port_manager.py`)
+
+### 🎨 前端负责人
+**主要职责：**
+- **用户界面开发**
+  - 主页面设计 (`templates/index.html`)
+  - 语音聊天界面 (`templates/voice_chat.html`)
+  - 角色扮演界面 (`templates/simple_roleplay.html`)
+  - 实时语音对话界面 (`templates/realtime_voice_chat.html`)
+
+- **交互逻辑实现**
+  - 核心应用逻辑 (`static/js/app.js`)
+  - 语音聊天功能 (`static/js/voice_chat.js`)
+  - 实时语音处理 (`static/js/realtime_voice_chat.js`)
+  - 音频转换器 (`static/js/audio_converter.js`)
+
+- **用户体验优化**
+  - 响应式设计和移动端适配
+  - 音频可视化和实时反馈
+  - 语音录制和播放控制
+  - 错误处理和用户提示
+
+- **前端技术实现**
+  - Web Audio API集成
+  - WebSocket客户端通信
+  - 音频格式处理和转换
+  - 浏览器兼容性处理
+
+### 🤝 协作方式
+- **代码审查**: 交叉审查对方的代码提交
+- **接口协调**: 共同定义前后端API接口规范
+- **测试配合**: 联合进行功能测试和集成测试
+- **问题解决**: 协作解决跨端技术问题
+
+### 📋 开发工具
+- **版本控制**: Git + GitHub
+- **项目管理**: GitHub Issues + Projects
+- **代码规范**: Python PEP8 + JavaScript ES6+
+- **测试工具**: pytest (后端) + Jest (前端)
+
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request来改进项目！
+
+### 贡献指南
+1. Fork 项目到你的GitHub账户
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建Pull Request
+
+### 代码规范
+- **后端**: 遵循PEP8规范，使用类型提示
+- **前端**: 使用ES6+语法，保持代码简洁
+- **注释**: 关键功能必须有详细注释
+- **测试**: 新功能需要包含相应测试用例
+---
+
+#
+# 👥 详细项目分工
+
+### 🔧 后端 & 工作流开发者
+**负责人：郝仁**
+
+#### 核心职责
+- **后端架构设计与实现**
+  - Flask应用框架搭建 (`voice_app.py`, `app.py`)
+  - RESTful API设计和实现
+  - WebSocket实时通信架构
+  - 数据库设计和ORM配置
+
+- **AI服务集成**
+  - AI对话服务开发 (`services/ai_service.py`)
+  - 角色管理系统 (`services/character_service.py`)
+  - 智能对话逻辑和上下文管理
+  - 多角色扮演功能实现
+
+- **语音服务开发**
+  - 百度语音识别集成 (`services/baidu_voice_service.py`)
+  - 百度语音合成服务 (`services/baidu_tts_service.py`)
+  - 实时语音处理器 (`services/realtime_voice_handler.py`)
+  - 音频格式转换和优化 (`utils/audio_converter.py`)
+
+- **工作流和DevOps**
+  - 项目构建和部署脚本
+  - 环境配置管理 (`.env`, `requirements.txt`)
+  - 代码质量控制和自动化测试
+  - 文档维护和API文档生成
+
+- **系统监控和优化**
+  - 性能监控和日志管理
+  - 端口管理和服务监控 (`utils/port_manager.py`)
+  - 错误处理和异常监控
+  - 系统安全和数据保护
+
+#### 技术栈
+- **后端框架**: Flask, Flask-SocketIO
+- **AI服务**: OpenAI API, 豆包API
+- **语音服务**: 百度语音API
+- **数据处理**: pandas, numpy
+- **音频处理**: pydub, wave
+- **部署工具**: Docker, nginx
+
+---
+
+### 🎨 前端开发者
+**负责人：赵伟龙**
+
+#### 核心职责
+- **用户界面设计与开发**
+  - 响应式网页设计 (`templates/*.html`)
+  - 现代化UI/UX界面实现
+  - 移动端适配和跨浏览器兼容
+  - CSS动画和交互效果
+
+- **前端交互逻辑**
+  - 核心应用逻辑 (`static/js/app.js`)
+  - 语音聊天功能 (`static/js/voice_chat.js`)
+  - 实时语音对话 (`static/js/realtime_voice_chat.js`)
+  - 角色选择和管理界面
+
+- **音频处理前端实现**
+  - Web Audio API集成
+  - 音频录制和播放控制
+  - 音频格式转换 (`static/js/audio_converter.js`)
+  - 音频可视化和波形显示
+
+- **实时通信客户端**
+  - WebSocket客户端实现
+  - 实时消息处理和显示
+  - 连接状态管理和重连机制
+  - 数据传输优化
+
+- **用户体验优化**
+  - 加载状态和进度提示
+  - 错误处理和用户反馈
+  - 无障碍访问支持
+  - 性能优化和代码分割
+
+#### 技术栈
+- **前端框架**: 原生JavaScript (ES6+)
+- **样式技术**: CSS3, Flexbox, Grid
+- **音频技术**: Web Audio API, MediaRecorder API
+- **实时通信**: Socket.IO Client
+- **构建工具**: Webpack, Babel
+- **测试工具**: Jest, Cypress
+
+
+### 🧪 测试 & DevOps 开发者
+**负责人：陈子昂**
+
+#### 核心职责
+**测试策略与执行**
+ -制定整体测试计划（单元测试、集成测试、E2E测试）
+ -负责集成测试和系统功能测试
+ -维护测试用例和测试报告
+ -负责性能测试和压力测试
+
+**DevOps与部署**
+-项目构建和部署流程（CI/CD）的搭建和维护
+-Docker容器化配置和管理
+-生产环境的配置、管理和发布
+-持续集成和持续部署流水线 (GitHub Actions)
+-系统监控与环境管理
+-性能监控和日志系统（如Prometheus/Grafana）的集成
+
+#### 技术栈
+- **测试工具: pytest, Jest, Cypress**
+- **DevOps: Docker, nginx, GitHub Actions**
+
+### 🤝 协作流程
+
+#### 开发协作
+1. **需求分析**: 共同分析功能需求，确定前后端接口
+2. **接口设计**: 协商API接口规范和数据格式
+3. **并行开发**: 各自负责模块的独立开发
+4. **集成测试**: 定期进行前后端集成测试
+5. **代码审查**: 交叉审查代码质量和规范
+
+#### 沟通机制
+- **每日站会**: 同步开发进度和问题
+- **技术讨论**: 解决技术难点和架构问题
+- **文档协作**: 共同维护技术文档和用户手册
+- **问题跟踪**: 使用GitHub Issues跟踪bug和功能请求
+
+#### 质量保证
+- **代码规范**: 统一的代码风格和命名规范
+- **测试覆盖**: 单元测试和集成测试
+- **性能监控**: 前后端性能指标监控
+- **安全审查**: 代码安全性和数据保护审查
+
+---
+
+### 📊 工作量分配
+
+| 模块 | 后端开发者 | 前端开发者 | 协作程度 |
+|------|------------|------------|----------|
+| API设计 | 70% | 30% | 高 |
+| 语音服务 | 90% | 10% | 中 |
+| 用户界面 | 10% | 90% | 低 |
+| 实时通信 | 60% | 40% | 高 |
+| 音频处理 | 50% | 50% | 高 |
+| 测试部署 | 80% | 20% | 中 |
+| 文档维护 | 60% | 40% | 中 |
+
+### 🎯 里程碑计划
+
+#### 第一阶段：基础功能 
+- **后端**: 完成基础API和语音服务集成
+- **前端**: 实现基础UI和语音录制功能
+
+#### 第二阶段：核心功能 
+- **后端**: 完成AI对话和角色管理
+- **前端**: 实现完整的用户交互流程
+
+#### 第三阶段：优化完善 
+- **后端**: 性能优化和错误处理
+- **前端**: UI优化和用户体验提升
+
+#### 第四阶段：测试部署 
+- **测试**: 集成测试和生产环境部署
