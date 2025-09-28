@@ -334,7 +334,7 @@ class AIRoleplayApp {
             'harry_potter': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg',
             'einstein': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg',
             'shakespeare': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg',
-            'confucius': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Confucius_02.png/256px-Confucius_02.png',
+            'confucius': '/static/images/kongzi.png',
             'marie_curie': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg'
         };
         
@@ -1642,13 +1642,6 @@ class AIRoleplayApp {
                     <div class="mb-3">
                         <label class="form-label">练习内容：</label>
                         <textarea class="form-control" id="skillContent" rows="3" placeholder="请输入您想练习的内容..."></textarea>
-                    </div>
-                `
-            }
-        };
-        
-        return skillMap[skillName] || null;
-    }racticeTopic" placeholder="例如：日常生活、工作、旅行、学习">
                     </div>
                 `
             }

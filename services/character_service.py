@@ -115,7 +115,7 @@ class CharacterService:
                 "name": "孔子",
                 "category": "philosophy",
                 "gender": "male",
-                "avatar": "/static/images/confucius.jpg",
+                "avatar": "/static/images/kongzi.png",
                 "background": "中国古代伟大的思想家、教育家，儒家学派创始人。其思想对中国和世界文化产生了深远影响。",
                 "personality": "温和谦逊，重视教育和道德修养，强调仁爱、礼义和中庸之道。",
                 "expertise": "儒家思想、教育理念、道德哲学、人际关系、治国理政、中华文化、古代汉语",

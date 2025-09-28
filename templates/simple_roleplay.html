@@ -13,17 +13,23 @@
 
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             min-height: 100vh;
             padding: 20px;
+            animation: gradientShift 10s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+            50% { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #667eea 100%); }
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1);
             overflow: hidden;
         }
 
@@ -32,6 +38,24 @@
             color: white;
             padding: 40px 20px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+            50% { transform: translate(-50%, -50%) rotate(180deg); }
         }
 
         .header h1 {
@@ -84,29 +108,55 @@
         .characters-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 25px;
             margin-bottom: 40px;
+            padding: 0 10px;
         }
 
         .character-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            padding: 30px;
             text-align: center;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(79, 172, 254, 0.1);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: none;
+        }
+        
+        .character-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe, #4facfe);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        
+        .character-card:hover::before {
+            transform: translateX(0);
         }
 
         .character-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-color: #4facfe;
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(79, 172, 254, 0.2), 0 0 0 1px rgba(79, 172, 254, 0.1);
+            border-color: rgba(79, 172, 254, 0.3);
+            background: linear-gradient(145deg, #ffffff 0%, #f0f8ff 100%);
         }
 
         .character-avatar {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             background: linear-gradient(135deg, #4facfe, #00f2fe);
             border-radius: 50%;
             display: flex;
@@ -115,66 +165,209 @@
             font-size: 2.5rem;
             color: white;
             margin: 0 auto 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .character-card:hover .character-avatar {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(79, 172, 254, 0.4);
         }
 
         .character-name {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            text-align: center;
+            background: linear-gradient(135deg, #2c3e50, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.3s ease;
         }
-
-        .character-category {
-            color: #4facfe;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 15px;
+        
+        .character-card:hover .character-name {
+            transform: scale(1.05);
         }
 
         .character-description {
-            color: #666;
+            color: #555;
             font-size: 0.95rem;
-            line-height: 1.5;
+            line-height: 1.6;
             margin-bottom: 20px;
-            height: 60px;
+            height: auto;
             overflow: hidden;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            font-style: italic;
+            opacity: 0.8;
+            transition: all 0.3s ease;
         }
-
+        
+        .character-card:hover .character-description {
+            opacity: 1;
+            color: #333;
+        }
+        
         .character-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
             justify-content: center;
-            margin-bottom: 20px;
+            margin: 10px 0;
+            min-height: 24px;
         }
-
+        
         .tag {
-            background: #e9ecef;
-            color: #495057;
-            padding: 4px 12px;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            color: #4facfe;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .character-card:hover .tag {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.15), rgba(0, 242, 254, 0.15));
+            border-color: rgba(79, 172, 254, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .detail-hover-btn {
+            display: none;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 12px;
             border-radius: 15px;
             font-size: 0.8rem;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            border: none;
             font-weight: 500;
+        }
+        
+        .detail-hover-btn:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .detail-container {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+            line-height: 1.6;
+        }
+        
+        .detail-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: block;
+            border: 4px solid #4facfe;
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+        }
+        
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        
+        .detail-section h3 {
+            color: #4facfe;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #f0f8ff;
+            padding-bottom: 5px;
+        }
+        
+        .detail-section p {
+            color: #555;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+        
+        .detail-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .detail-tag {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            color: #4facfe;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid rgba(79, 172, 254, 0.2);
+        }
+        
+        .detail-quote {
+            background: linear-gradient(135deg, #f8f9ff, #f0f8ff);
+            border-left: 4px solid #4facfe;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            font-style: italic;
+            color: #333;
         }
 
         .chat-btn {
             background: linear-gradient(135deg, #4facfe, #00f2fe);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
+            padding: 14px 30px;
+            border-radius: 30px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+        
+        .chat-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .chat-btn:hover::before {
+            left: 100%;
         }
 
         .chat-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+            background: linear-gradient(135deg, #3a8bfe, #00d4fe);
+        }
+        
+        .chat-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
         }
 
         /* 聊天模态框 */
@@ -337,6 +530,30 @@
             animation: pulse 1s infinite;
         }
 
+        .detail-hover-btn {
+            display: none;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            border: none;
+            font-weight: 500;
+        }
+
+        .detail-hover-btn:hover {
+            background: linear-gradient(135deg, #5a67d8, #667eea);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
@@ -391,6 +608,37 @@
         @media (max-width: 768px) {
             .characters-grid {
                 grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 0 5px;
+            }
+            
+            .character-card {
+                height: 420px;
+                padding: 25px 20px;
+            }
+            
+            .character-avatar {
+                width: 75px;
+                height: 75px;
+            }
+            
+            .character-avatar img {
+                width: 75px !important;
+                height: 75px !important;
+            }
+            
+            .character-avatar div[id^="fallback-"] {
+                width: 75px !important;
+                height: 75px !important;
+            }
+            
+            .character-name {
+                font-size: 1.3rem;
+            }
+            
+            .character-description {
+                font-size: 0.9rem;
+                padding: 0 5px;
             }
             
             .stats {
@@ -401,6 +649,49 @@
             .modal-content {
                 width: 95%;
                 height: 90vh;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .character-card {
+                height: 400px;
+                padding: 20px 15px;
+            }
+            
+            .character-avatar {
+                width: 65px;
+                height: 65px;
+                margin-bottom: 15px;
+            }
+            
+            .character-name {
+                font-size: 1.2rem;
+                margin-bottom: 10px;
+            }
+            
+            .character-description {
+                font-size: 0.85rem;
+            }
+            
+            .chat-btn {
+                padding: 12px 25px;
+                font-size: 0.9rem;
+            }
+            
+            .header {
+                padding: 30px 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
             }
         }
     </style>
@@ -433,33 +724,54 @@
             
             <div class="characters-grid">
                 {% for character in characters %}
-                <div class="character-card" onclick="startChat('{{ character.id }}', '{{ character.name }}')">
-                    <div class="character-avatar">
-                        {% if character.category == 'philosophy' %}🧠
-                        {% elif character.category == 'science' %}🔬
-                        {% elif character.category == 'literature' %}📚
-                        {% elif character.category == 'fiction' %}🎭
-                        {% else %}👤
-                        {% endif %}
+                <div class="character-card" onclick="startChat('{{ character.id }}', '{{ character.name }}')"
+                     style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 450px; position: relative;"
+                     onmouseenter="showDetailButton('{{ character.id }}')"
+                     onmouseleave="hideDetailButton('{{ character.id }}')">
+                    
+                    <!-- 查看详情悬浮按钮 -->
+                    <div id="detail-btn-{{ character.id }}" class="detail-hover-btn" style="display: none; position: absolute; top: 15px; right: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 6px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.3s ease;"
+                         onclick="event.stopPropagation(); showCharacterDetail('{{ character.id }}', '{{ character.name }}')">
+                        📋 查看详情
                     </div>
-                    <div class="character-name">{{ character.name }}</div>
-                    <div class="character-category">
-                        {% if character.category == 'philosophy' %}哲学家
-                        {% elif character.category == 'science' %}科学家
-                        {% elif character.category == 'literature' %}文学家
-                        {% elif character.category == 'fiction' %}虚拟角色
-                        {% else %}其他
-                        {% endif %}
+                    <!-- 角色头像 -->
+                    <div class="character-avatar" style="position: relative;">
+                        <img id="avatar-{{ character.id }}" 
+                             src="{% if character.id == 'socrates' %}https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Socrates_Louvre.jpg/300px-Socrates_Louvre.jpg{% elif character.id == 'harry_potter' %}https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg{% elif character.id == 'einstein' %}https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg{% elif character.id == 'shakespeare' %}https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg{% elif character.id == 'confucius' %}/static/images/kongzi.png{% elif character.id == 'marie_curie' %}https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg{% endif %}" 
+                             alt="{{ character.name }}" 
+                             style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); transition: all 0.3s ease;"
+                             onerror="this.style.display='none'; document.getElementById('fallback-{{ character.id }}').style.display='flex';"
+                             onload="document.getElementById('fallback-{{ character.id }}').style.display='none';">
+                        <!-- 备用emoji头像 -->
+                        <div id="fallback-{{ character.id }}" style="display: none; width: 90px; height: 90px; background: linear-gradient(135deg, #4facfe, #00f2fe); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: white; position: absolute; top: 0; left: 0; border: 3px solid rgba(255,255,255,0.8);">
+                            {% if character.category == 'philosophy' %}🧠
+                            {% elif character.category == 'science' %}🔬
+                            {% elif character.category == 'literature' %}📚
+                            {% elif character.category == 'fiction' %}🎭
+                            {% else %}👤
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="character-description">{{ character.background[:100] }}...</div>
-                    <div class="character-tags">
-                        {% for tag in character.tags[:3] %}
-                        <span class="tag">{{ tag }}</span>
-                        {% endfor %}
+                    
+                    <!-- 角色信息 -->
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%;">
+                        <div class="character-name" style="text-align: center;">{{ character.name }}</div>
+                        <div class="character-description" style="text-align: center; margin: 10px 0;">{{ character.background[:40] }}{% if character.background|length > 40 %}...{% endif %}</div>
+                        
+                        <!-- 角色技能标签 -->
+                        <div class="character-tags" style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0;">
+                            {% for tag in character.tags[:3] %}
+                            <span class="tag" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); color: #4facfe; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; border: 1px solid rgba(79, 172, 254, 0.2);">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
                     </div>
-                    <button class="chat-btn" onclick="event.stopPropagation(); startChat('{{ character.id }}', '{{ character.name }}')">
-                        💬 开始对话
-                    </button>
+                    
+                    <!-- 操作按钮 -->
+                    <div style="margin-top: auto; width: 100%;">
+                        <button class="chat-btn" onclick="event.stopPropagation(); startChat('{{ character.id }}', '{{ character.name }}')">
+                            💬 开始对话
+                        </button>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -504,6 +816,24 @@
         </div>
     </div>
 
+    <!-- 角色详情模态框 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content" style="max-width: 600px; height: auto; max-height: 85vh;">
+            <div class="modal-header">
+                <div class="modal-title" id="detailModalTitle">角色详情</div>
+                <button class="close-btn" onclick="closeDetail()">&times;</button>
+            </div>
+            <div class="detail-container" id="detailContainer" style="padding: 30px; overflow-y: auto; flex: 1;">
+                <!-- 角色详情内容将在这里动态生成 -->
+            </div>
+            <div class="detail-actions" style="padding: 20px; border-top: 1px solid #eee; text-align: center;">
+                <button class="chat-btn" id="detailChatBtn" onclick="startChatFromDetail()" style="width: auto; padding: 12px 30px; margin: 0 auto;">
+                    💬 开始对话
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
         let socket = null;
@@ -512,6 +842,284 @@
         let audioChunks = [];
         let isRecording = false;
         let audioPlayer = null;
+
+        // 角色头像映射 - 使用维基百科等稳定源
+        const characterAvatars = {
+            'socrates': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Socrates_Louvre.jpg/300px-Socrates_Louvre.jpg',
+            'harry_potter': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg',
+            'einstein': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg',
+            'shakespeare': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg',
+            'confucius': '/static/images/kongzi.png',
+            'marie_curie': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg'
+        };
+
+        // 角色详细信息数据
+        const characterDetails = {
+            'socrates': {
+                name: '苏格拉底',
+                avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Socrates_Louvre.jpg/300px-Socrates_Louvre.jpg',
+                birth: '公元前470年',
+                location: '古希腊雅典',
+                profession: '哲学家',
+                achievements: [
+                    '西方哲学的奠基人之一',
+                    '创立了著名的"苏格拉底式问答法"',
+                    '提出"认识你自己"的哲学命题',
+                    '影响了柏拉图和亚里士多德等后世哲学家'
+                ],
+                personality: '睿智、谦逊、善于思辨，相信"我知道我无知"的谦逊态度',
+                famous_quotes: [
+                    '未经审视的生活不值得过',
+                    '我知道我无知',
+                    '认识你自己'
+                ],
+                background: '苏格拉底是古希腊著名哲学家，被认为是西方哲学的奠基人之一。他没有留下任何著作，我们对他的了解主要来自柏拉图的对话录。苏格拉底以其独特的问答法著称，通过不断的提问来揭示真理，启发人们思考。他一生致力于道德哲学的探讨，最终因"腐蚀青年"和"不信神"的罪名被雅典法庭判处死刑。'
+            },
+            'harry_potter': {
+                name: '哈利·波特',
+                avatar: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg',
+                birth: '1980年7月31日',
+                location: '英国',
+                profession: '巫师、傲罗',
+                achievements: [
+                    '击败了黑魔王伏地魔',
+                    '霍格沃茨魁地奇队最年轻的找球手',
+                    '邓布利多军的创始人之一',
+                    '拯救了魔法世界'
+                ],
+                personality: '勇敢、忠诚、正义，有强烈的责任感和保护他人的愿望',
+                famous_quotes: [
+                    '我们的选择远比我们的能力更能表明我们是什么样的人',
+                    '死亡实际上就像是经过漫长的一天之后，终于上床休息',
+                    '真相是一种美丽而可怕的东西'
+                ],
+                background: '哈利·波特是J.K.罗琳创作的魔幻小说《哈利·波特》系列的主人公。他是一个在麻瓜家庭长大的巫师，11岁时收到霍格沃茨魔法学校的入学通知书，从此开始了他在魔法世界的冒险。哈利从小就背负着击败黑魔王伏地魔的使命，在朋友们的帮助下，经历了七年的学习和战斗，最终成功拯救了魔法世界。'
+            },
+            'einstein': {
+                name: '阿尔伯特·爱因斯坦',
+                avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg',
+                birth: '1879年3月14日',
+                location: '德国',
+                profession: '理论物理学家',
+                achievements: [
+                    '提出了相对论',
+                    '发现了光电效应',
+                    '获得1921年诺贝尔物理学奖',
+                    '被誉为"现代物理学之父"'
+                ],
+                personality: '好奇、专注、富有想象力，对宇宙充满无限的探索欲望',
+                famous_quotes: [
+                    '想象力比知识更重要',
+                    '上帝不掷骰子',
+                    '我要知道上帝的思想，其余的都是细节'
+                ],
+                background: '阿尔伯特·爱因斯坦是20世纪最伟大的物理学家之一，他的相对论彻底改变了人类对时间、空间和引力的理解。爱因斯坦不仅在科学上有杰出贡献，还是一位和平主义者和人道主义者。他的E=mc²公式成为了世界上最著名的物理公式，他的思想至今仍在影响着现代物理学的发展。'
+            },
+            'shakespeare': {
+                name: '威廉·莎士比亚',
+                avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg',
+                birth: '1564年4月26日',
+                location: '英国斯特拉特福德',
+                profession: '剧作家、诗人',
+                achievements: [
+                    '创作了39部戏剧作品',
+                    '写下了154首十四行诗',
+                    '被誉为"英国文学史上最杰出的戏剧家"',
+                    '作品被翻译成多种语言，在世界各地上演'
+                ],
+                personality: '富有创造力、洞察人性、善于观察生活，对人类情感有深刻理解',
+                famous_quotes: [
+                    '生存还是毁灭，这是一个问题',
+                    '全世界是个舞台，所有的男男女女不过是一些演员',
+                    '黑夜无论怎样悠长，白昼总会到来'
+                ],
+                background: '威廉·莎士比亚是英国文学史上最杰出的戏剧家和诗人，被普遍认为是英语文学中最伟大的作家。他的作品包括悲剧、喜剧和历史剧，如《哈姆雷特》、《罗密欧与朱丽叶》、《麦克白》等，这些作品至今仍在世界各地的舞台上演出，深深影响着后世的文学创作。'
+            },
+            'confucius': {
+                name: '孔子',
+                avatar: '/static/images/kongzi.png',
+                birth: '公元前551年',
+                location: '中国鲁国',
+                profession: '思想家、教育家',
+                achievements: [
+                    '创立了儒家学派',
+                    '编订了《诗经》、《尚书》等经典',
+                    '提出了"仁爱"思想',
+                    '被尊为"万世师表"'
+                ],
+                personality: '仁爱、谦逊、博学，重视教育和道德修养',
+                famous_quotes: [
+                    '学而时习之，不亦说乎',
+                    '己所不欲，勿施于人',
+                    '三人行，必有我师焉'
+                ],
+                background: '孔子是中国古代伟大的思想家、教育家，儒家学派的创始人。他的思想以"仁"为核心，强调道德修养和社会和谐。孔子一生致力于教育事业，培养了众多弟子，其思想对中国乃至东亚文化产生了深远影响。《论语》记录了他的言行，成为中华文化的重要经典。'
+            },
+            'marie_curie': {
+                name: '玛丽·居里',
+                avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg',
+                birth: '1867年11月7日',
+                location: '波兰华沙',
+                profession: '物理学家、化学家',
+                achievements: [
+                    '发现了放射性元素钋和镭',
+                    '两次获得诺贝尔奖（物理学奖和化学奖）',
+                    '第一位获得诺贝尔奖的女性',
+                    '创立了放射化学'
+                ],
+                personality: '坚韧不拔、专注认真、勇于创新，对科学有着无限的热爱',
+                famous_quotes: [
+                    '在科学上重要的是研究出来的东西，不是研究者个人',
+                    '我们必须相信，我们对每一件事情都具有天赋的才能',
+                    '生活中没有什么可怕的东西，只有需要理解的东西'
+                ],
+                background: '玛丽·居里是历史上最著名的女科学家之一，她在放射性研究方面做出了开创性贡献。作为第一位获得诺贝尔奖的女性，她打破了科学界的性别障碍。居里夫人不仅在科学研究上取得巨大成就，还致力于科学教育，她的精神激励着无数后来的科学工作者。'
+            }
+        };
+
+        // 获取角色头像的函数
+        function getCharacterAvatar(characterId) {
+            return characterAvatars[characterId] || null;
+        }
+
+        // 创建角色头像元素
+        function createCharacterAvatarElement(characterId, size = '80px') {
+            const avatarUrl = getCharacterAvatar(characterId);
+            const fallbackEmoji = getCharacterEmoji(characterId);
+            
+            if (avatarUrl) {
+                return `
+                    <div class="character-avatar" style="width: ${size}; height: ${size};">
+                        <img src="${avatarUrl}" 
+                             alt="${characterId}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                             onload="this.nextElementSibling.style.display='none';">
+                        <div style="display: none; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; background: linear-gradient(135deg, #4facfe, #00f2fe); border-radius: 50%;">
+                            ${fallbackEmoji}
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="character-avatar" style="width: ${size}; height: ${size};">
+                        ${fallbackEmoji}
+                    </div>
+                `;
+            }
+        }
+
+        // 显示详情按钮
+        function showDetailButton(characterId) {
+            const btn = document.getElementById('detail-btn-' + characterId);
+            if (btn) {
+                btn.style.display = 'block';
+            }
+        }
+
+        // 隐藏详情按钮
+        function hideDetailButton(characterId) {
+            const btn = document.getElementById('detail-btn-' + characterId);
+            if (btn) {
+                btn.style.display = 'none';
+            }
+        }
+
+        // 显示角色详情
+        function showCharacterDetail(characterId, characterName) {
+            const character = characterDetails[characterId];
+            if (!character) {
+                console.error('未找到角色信息:', characterId);
+                return;
+            }
+
+            // 设置模态框标题
+            document.getElementById('detailModalTitle').textContent = character.name + ' 详情';
+            
+            // 生成详情内容
+            const detailContainer = document.getElementById('detailContainer');
+            detailContainer.innerHTML = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; width: 120px; height: 120px; margin-bottom: 20px;">
+                        <img src="${character.avatar}" 
+                             alt="${character.name}" 
+                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 4px solid #4facfe;">
+                    </div>
+                    <h2 style="color: #333; margin: 0; font-size: 1.8rem;">${character.name}</h2>
+                    <p style="color: #666; margin: 5px 0 0 0; font-size: 1rem;">${character.profession}</p>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #4facfe; margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        <span>📊</span> 基本信息
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <strong style="color: #555;">🎅 出生时间：</strong><br>
+                            <span style="color: #333;">${character.birth}</span>
+                        </div>
+                        <div>
+                            <strong style="color: #555;">🌍 出生地：</strong><br>
+                            <span style="color: #333;">${character.location}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #f0f8ff; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #4facfe; margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        <span>🏆</span> 主要成就
+                    </h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${character.achievements.map(achievement => `<li style="margin-bottom: 8px; color: #333;">${achievement}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div style="background: #fff5f5; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #4facfe; margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        <span>💬</span> 经典名言
+                    </h3>
+                    <div style="font-style: italic; color: #555;">
+                        ${character.famous_quotes.map(quote => `<div style="margin-bottom: 12px; padding: 10px; background: white; border-left: 4px solid #4facfe; border-radius: 5px;">"${quote}"</div>`).join('')}
+                    </div>
+                </div>
+                
+                <div style="background: #f5fff5; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: #4facfe; margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        <span>🎨</span> 性格特点
+                    </h3>
+                    <p style="color: #333; line-height: 1.6; margin: 0;">${character.personality}</p>
+                </div>
+                
+                <div style="background: #fffef0; border-radius: 15px; padding: 20px;">
+                    <h3 style="color: #4facfe; margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        <span>📚</span> 人物背景
+                    </h3>
+                    <p style="color: #333; line-height: 1.8; margin: 0; text-align: justify;">${character.background}</p>
+                </div>
+            `;
+            
+            // 设置当前角色，以便在详情页面开始对话
+            currentCharacter = characterId;
+            
+            // 显示模态框
+            document.getElementById('detailModal').classList.add('show');
+        }
+
+        // 关闭详情模态框
+        function closeDetail() {
+            document.getElementById('detailModal').classList.remove('show');
+        }
+
+        // 从详情页面开始对话
+        function startChatFromDetail() {
+            const character = characterDetails[currentCharacter];
+            if (character) {
+                // 关闭详情模态框
+                closeDetail();
+                // 开始对话
+                startChat(currentCharacter, character.name);
+            }
+        }
 
         function startChat(characterId, characterName) {
             console.log('开始对话:', characterId, characterName);
@@ -1290,7 +1898,38 @@
             }
         });
 
-        console.log('页面加载完成，角色数量:', {{ character_count }});
+        // 点击详情模态框外部关闭
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') {
+                closeDetail();
+            }
+        });
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，角色数量: {{ character_count }}');
+            
+            // 初始化头像加载状态检查
+            setTimeout(function() {
+                checkAvatarLoadStatus();
+            }, 2000);
+        });
+        
+        // 检查头像加载状态
+        function checkAvatarLoadStatus() {
+            const avatars = document.querySelectorAll('[id^="avatar-"]');
+            avatars.forEach(function(img) {
+                if (img.complete && img.naturalHeight === 0) {
+                    // 图片加载失败，显示备用头像
+                    img.style.display = 'none';
+                    const characterId = img.id.replace('avatar-', '');
+                    const fallback = document.getElementById('fallback-' + characterId);
+                    if (fallback) {
+                        fallback.style.display = 'flex';
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
