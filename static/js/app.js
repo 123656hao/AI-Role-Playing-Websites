@@ -1872,6 +1872,7 @@ function initializeApp() {
     }
 }
 
+
 if (document.readyState === 'loading') {
     console.log('📄 DOM正在加载，等待DOMContentLoaded事件...');
     document.addEventListener('DOMContentLoaded', initializeApp);
