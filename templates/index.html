@@ -3,251 +3,587 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI角色扮演聊天 - 与历史名人对话</title>
+    <title>AI智能角色扮演 - 与历史名人对话</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/enhanced.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --accent-color: #f093fb;
-            --text-dark: #2d3748;
-            --text-light: #718096;
-            --bg-light: #f7fafc;
-            --border-color: #e2e8f0;
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --accent-color: #ec4899;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --text-muted: #9ca3af;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --border-color: #e5e7eb;
+            --border-light: #f3f4f6;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-2xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             min-height: 100vh;
-            margin: 0;
+            line-height: 1.6;
+            font-size: 14px;
+            color: var(--text-dark);
         }
 
         .main-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            margin: 20px;
-            min-height: calc(100vh - 40px);
+            background: var(--bg-primary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            margin: 1rem;
+            min-height: calc(100vh - 2rem);
             overflow: hidden;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 新增：玻璃态效果 */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 2rem;
+            padding: 3rem 2rem;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200"><path d="M0,50 Q250,150 500,50 T1000,50 V200 H0 Z" fill="rgba(255,255,255,0.1)"/></svg>');
+            background-size: cover;
+            background-position: bottom;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 3rem;
+            font-weight: 800;
             margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #ffffff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0;
-        }
-
-        .search-section {
-            padding: 2rem;
-            background: var(--bg-light);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .search-box {
-            position: relative;
+            font-size: 1.2rem;
+            opacity: 0.95;
+            font-weight: 300;
             max-width: 600px;
             margin: 0 auto;
         }
 
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .search-section {
+            padding: 2.5rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .search-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
         .search-input {
             width: 100%;
-            padding: 1rem 1rem 1rem 3rem;
+            padding: 1.25rem 1.25rem 1.25rem 3.5rem;
             border: 2px solid var(--border-color);
-            border-radius: 50px;
+            border-radius: var(--radius-xl);
             font-size: 1.1rem;
-            transition: all 0.3s ease;
+            background: var(--bg-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
         }
 
         .search-input:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg), 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
         .search-icon {
             position: absolute;
-            left: 1rem;
+            left: 1.25rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-light);
+            font-size: 1.2rem;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.active {
+            background: var(--bg-secondary);
+            color: var(--primary-color);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
         }
 
         .category-filters {
             display: flex;
             justify-content: center;
             gap: 1rem;
-            margin-top: 1.5rem;
             flex-wrap: wrap;
         }
 
         .category-btn {
-            padding: 0.5rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             border: 2px solid var(--border-color);
-            background: white;
-            border-radius: 25px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .category-btn:hover::before {
+            left: 100%;
         }
 
         .category-btn:hover,
         .category-btn.active {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .characters-section {
-            padding: 2rem;
+            padding: 3rem 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .characters-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .character-card {
-            background: white;
-            border-radius: 15px;
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
             padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            border: 2px solid transparent;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 360px;
+            max-height: 360px;
+        }
+
+        .character-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .character-card::after {
+            content: '点击查看详情';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .character-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .character-card:hover::after {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .character-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
             border-color: var(--primary-color);
         }
 
+        .character-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 0.8rem;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
         .character-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            border-radius: var(--radius-xl);
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 2.2rem;
             color: white;
-            margin: 0 auto 1rem;
+            margin: 0 auto 1rem auto;
+            box-shadow: var(--shadow-md);
+            position: relative;
         }
 
-        .character-name {
+        .character-avatar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--radius-xl);
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.3));
+        }
+
+        .character-info {
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character-info h3 {
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--text-dark);
+            margin: 0 auto;
+            text-align: center !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            line-height: 1.3;
+            padding: 0;
+            word-break: break-word;
             text-align: center;
-            margin-bottom: 0.5rem;
         }
 
         .character-category {
-            text-align: center;
             color: var(--primary-color);
-            font-weight: 500;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin: 0.3rem auto 0 auto;
         }
 
         .character-description {
-            color: var(--text-light);
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            line-height: 1.3;
+            margin: 0.8rem 0;
+            text-align: center;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            max-height: 1.3em;
+            flex-grow: 1;
+            padding: 0 0.5rem;
         }
 
         .character-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+            gap: 0.4rem;
+            margin: 0.6rem 0;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            min-height: 1.5rem;
         }
 
         .tag {
-            background: var(--bg-light);
+            background: var(--bg-secondary);
             color: var(--text-dark);
-            padding: 0.25rem 0.75rem;
-            border-radius: 15px;
-            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.75rem;
             font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+
+        .character-actions {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: auto;
+            flex-shrink: 0;
         }
 
         .chat-btn {
-            width: 100%;
-            padding: 0.75rem;
+            padding: 0.875rem 2rem;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             font-weight: 600;
-            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         .chat-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        /* 聊天模态框样式 */
+        .chat-modal .modal-dialog {
+            max-width: 900px;
         }
 
         .chat-modal .modal-content {
-            border-radius: 20px;
+            border-radius: var(--radius-2xl);
             border: none;
             overflow: hidden;
+            box-shadow: var(--shadow-xl);
         }
 
         .chat-header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 1.5rem;
+            padding: 2rem;
             border-bottom: none;
+            position: relative;
+        }
+
+        .chat-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        }
+
+        .chat-character-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .chat-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-xl);
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-character-details h5 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-character-details small {
+            opacity: 0.9;
+            font-size: 1rem;
         }
 
         .chat-body {
-            height: 500px;
+            height: 600px;
             display: flex;
             flex-direction: column;
+            background: var(--bg-secondary);
         }
 
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem;
-            background: var(--bg-light);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .message {
-            margin-bottom: 1rem;
             display: flex;
             align-items: flex-start;
-            gap: 0.75rem;
+            gap: 1rem;
+            max-width: 85%;
         }
 
         .message.user {
+            align-self: flex-end;
             flex-direction: row-reverse;
         }
 
         .message-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-lg);
             background: var(--primary-color);
             display: flex;
             align-items: center;
@@ -255,6 +591,7 @@
             color: white;
             font-weight: 600;
             flex-shrink: 0;
+            font-size: 0.9rem;
         }
 
         .message.user .message-avatar {
@@ -262,101 +599,190 @@
         }
 
         .message-content {
-            background: white;
-            padding: 1rem;
-            border-radius: 15px;
-            max-width: 70%;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--bg-primary);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            position: relative;
+            line-height: 1.6;
         }
 
         .message.user .message-content {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
+            border-color: transparent;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .message:hover .message-time {
+            opacity: 1;
         }
 
         .input-section {
-            padding: 1rem;
-            background: white;
-            border-top: 1px solid var(--border-color);
+            padding: 1.5rem;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-light);
         }
 
         .input-group {
             display: flex;
-            gap: 0.5rem;
-            align-items: center;
+            gap: 0.75rem;
+            align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 0.75rem;
+            padding: 1rem 1.25rem;
             border: 2px solid var(--border-color);
-            border-radius: 25px;
+            border-radius: var(--radius-xl);
             resize: none;
+            max-height: 120px;
+            font-size: 1rem;
+            line-height: 1.5;
+            background: var(--bg-primary);
+            transition: all 0.3s;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         .voice-btn, .send-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-xl);
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            font-size: 1.1rem;
         }
 
         .voice-btn {
-            background: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), #f472b6);
             color: white;
+        }
+
+        .voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+        }
+
+        .voice-btn.recording {
+            background: var(--error-color);
+            animation: recordingPulse 1s infinite;
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
         }
 
         .send-btn {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
         }
 
-        .voice-btn:hover, .send-btn:hover {
-            transform: scale(1.1);
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .skills-section {
-            padding: 1rem;
-            background: var(--bg-light);
-            border-top: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .skills-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .skills-grid {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .skill-btn {
-            margin: 0.25rem;
             padding: 0.5rem 1rem;
-            background: white;
+            background: var(--bg-primary);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            font-size: 0.9rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .skill-btn:hover::before {
+            left: 100%;
         }
 
         .skill-btn:hover {
             background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
+            transform: translateY(-1px);
         }
 
+        /* 加载和错误状态 */
         .loading {
             display: none;
             text-align: center;
-            padding: 2rem;
+            padding: 3rem;
             color: var(--text-light);
+        }
+
+        .loading.show {
+            display: block;
         }
 
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
             border-top: 3px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
         }
 
         @keyframes spin {
@@ -364,25 +790,67 @@
             100% { transform: rotate(360deg); }
         }
 
-        .recording {
-            background: #ff4757 !important;
-            animation: pulse 1s infinite;
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .characters-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 1.5rem;
+            }
         }
 
         @media (max-width: 768px) {
             .main-container {
-                margin: 10px;
-                border-radius: 15px;
+                margin: 0.5rem;
+                border-radius: var(--radius-xl);
+            }
+
+            .header {
+                padding: 2rem 1rem;
             }
 
             .header h1 {
-                font-size: 2rem;
+                font-size: 2.2rem;
+            }
+
+            .hero-stats {
+                gap: 1rem;
+            }
+
+            .stat-item {
+                padding: 0.75rem;
+                min-width: 100px;
+            }
+
+            .search-section {
+                padding: 2rem 1rem;
+            }
+
+            .characters-section {
+                padding: 2rem 1rem;
             }
 
             .characters-grid {
@@ -394,41 +862,154 @@
             }
 
             .category-btn {
-                padding: 0.4rem 1rem;
+                padding: 0.6rem 1rem;
                 font-size: 0.9rem;
             }
+
+            .chat-modal .modal-dialog {
+                max-width: 100%;
+                margin: 0.5rem;
+            }
+
+            .chat-body {
+                height: 500px;
+            }
+
+            .message {
+                max-width: 95%;
+            }
+
+            .input-group {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .message-input {
+                min-width: 200px;
+            }
         }
+
+        @media (max-width: 480px) {
+            .character-card {
+                padding: 1.5rem;
+            }
+
+            .character-header {
+                margin-bottom: 1rem;
+            }
+
+            .character-avatar {
+                width: 60px;
+                height: 60px;
+                font-size: 1.8rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .character-info h3 {
+                font-size: 1.2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .character-card::after {
+                display: none;
+            }
+        }
+
+        /* 暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-dark: #f9fafb;
+                --text-light: #d1d5db;
+                --text-muted: #9ca3af;
+                --bg-primary: #1f2937;
+                --bg-secondary: #111827;
+                --bg-tertiary: #374151;
+                --border-color: #374151;
+                --border-light: #4b5563;
+            }
+
+            body {
+                background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #0f172a 100%);
+            }
+
+            .main-container {
+                background: var(--bg-primary);
+                border: 1px solid var(--border-color);
+            }
+        }
+    </style>
     </style>
 </head>
 <body>
     <div class="main-container">
         <!-- 头部 -->
         <div class="header">
-            <h1><i class="fas fa-robot"></i> AI角色扮演聊天</h1>
-            <p>与历史名人、虚拟角色进行智能对话，体验不同的人生智慧</p>
+            <div class="header-content">
+                <h1><i class="fas fa-robot"></i> AI智能角色扮演</h1>
+                <p>与历史名人、科学家、文学家进行深度对话，探索不同的人生智慧与知识宝藏</p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">6</span>
+                        <span class="stat-label">精选角色</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">∞</span>
+                        <span class="stat-label">对话次数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">在线服务</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 搜索区域 -->
         <div class="search-section">
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="search-input" id="searchInput" placeholder="搜索你想对话的角色...">
-            </div>
-            <div class="category-filters">
-                <button class="category-btn active" data-category="all">全部</button>
-                <button class="category-btn" data-category="philosophy">哲学家</button>
-                <button class="category-btn" data-category="science">科学家</button>
-                <button class="category-btn" data-category="literature">文学家</button>
-                <button class="category-btn" data-category="fiction">虚拟角色</button>
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="searchInput" placeholder="搜索您想要对话的角色，如"苏格拉底"、"爱因斯坦"...">
+                    <div class="search-suggestions" id="searchSuggestions">
+                        <!-- 搜索建议将动态添加 -->
+                    </div>
+                </div>
+                <div class="category-filters">
+                    <button class="category-btn active" data-category="all">
+                        <i class="fas fa-globe"></i> 全部角色
+                    </button>
+                    <button class="category-btn" data-category="philosophy">
+                        <i class="fas fa-brain"></i> 哲学家
+                    </button>
+                    <button class="category-btn" data-category="science">
+                        <i class="fas fa-flask"></i> 科学家
+                    </button>
+                    <button class="category-btn" data-category="literature">
+                        <i class="fas fa-feather-alt"></i> 文学家
+                    </button>
+                    <button class="category-btn" data-category="fiction">
+                        <i class="fas fa-magic"></i> 虚拟角色
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- 角色展示区域 -->
         <div class="characters-section">
-            <h2 class="text-center mb-4">选择你的对话伙伴</h2>
+            <div class="section-header">
+                <h2 class="section-title">选择您的对话伙伴</h2>
+                <p class="section-subtitle">每位角色都有独特的知识背景和对话风格，点击开始您的专属对话体验</p>
+            </div>
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                <p>正在加载角色...</p>
+                <p>正在加载精彩角色...</p>
             </div>
             <div class="characters-grid" id="charactersGrid">
                 <!-- 角色卡片将通过JavaScript动态生成 -->
@@ -442,14 +1023,18 @@
             <div class="modal-content chat-modal">
                 <div class="chat-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <div class="character-avatar me-3" id="chatAvatar">👤</div>
-                            <div>
+                        <div class="chat-character-info">
+                            <div class="chat-avatar" id="chatAvatar">👤</div>
+                            <div class="chat-character-details">
                                 <h5 class="mb-0" id="chatCharacterName">角色名称</h5>
-                                <small class="opacity-75" id="chatCharacterCategory">分类</small>
                             </div>
                         </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-light" id="voiceSettingsBtn" title="语音设置">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                        </div>
                     </div>
                 </div>
                 <div class="chat-body">
@@ -457,18 +1042,28 @@
                         <!-- 消息将动态添加 -->
                     </div>
                     <div class="skills-section" id="skillsSection">
-                        <small class="text-muted">快速技能：</small>
-                        <div class="mt-2">
-                            <button class="skill-btn" data-skill="knowledge_qa">知识问答</button>
-                            <button class="skill-btn" data-skill="emotional_support">情感陪伴</button>
-                            <button class="skill-btn" data-skill="teaching_guidance">教学指导</button>
-                            <button class="skill-btn" data-skill="creative_writing">创作协助</button>
-                            <button class="skill-btn" data-skill="language_practice">语言练习</button>
+                        <div class="skills-title">快速技能</div>
+                        <div class="skills-grid">
+                            <button class="skill-btn" data-skill="knowledge_qa">
+                                <i class="fas fa-question-circle"></i> 知识问答
+                            </button>
+                            <button class="skill-btn" data-skill="emotional_support">
+                                <i class="fas fa-heart"></i> 情感陪伴
+                            </button>
+                            <button class="skill-btn" data-skill="teaching_guidance">
+                                <i class="fas fa-chalkboard-teacher"></i> 教学指导
+                            </button>
+                            <button class="skill-btn" data-skill="creative_writing">
+                                <i class="fas fa-pen-fancy"></i> 创作协助
+                            </button>
+                            <button class="skill-btn" data-skill="language_practice">
+                                <i class="fas fa-language"></i> 语言练习
+                            </button>
                         </div>
                     </div>
                     <div class="input-section">
                         <div class="input-group">
-                            <textarea class="message-input" id="messageInput" placeholder="输入你的消息..." rows="1"></textarea>
+                            <textarea class="message-input" id="messageInput" placeholder="请输入您的消息，按 Enter 发送..." rows="1"></textarea>
                             <button class="voice-btn" id="voiceBtn" title="语音输入">
                                 <i class="fas fa-microphone"></i>
                             </button>
@@ -501,7 +1096,145 @@
         </div>
     </div>
 
+    <!-- 语音设置模态框 -->
+    <div class="modal fade" id="voiceSettingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-volume-up me-2"></i>语音设置
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-microphone me-1"></i>语音输入
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="voiceInputEnabled" checked>
+                            <label class="form-check-label" for="voiceInputEnabled">
+                                启用语音输入功能
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="directVoiceInput" checked>
+                            <label class="form-check-label" for="directVoiceInput">
+                                直接语音输入模式（语音直接发送，不经过文字输入框）
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            💡 直接模式：语音录制后立即发送给AI<br>
+                            📝 传统模式：语音先转换为文字，可编辑后发送
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-volume-up me-1"></i>语音输出
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="voiceOutputEnabled" checked>
+                            <label class="form-check-label" for="voiceOutputEnabled">
+                                自动播放AI回复语音
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceVolume" class="form-label">
+                            <i class="fas fa-volume-down me-1"></i>语音音量
+                        </label>
+                        <input type="range" class="form-range" id="voiceVolume" min="0" max="1" step="0.1" value="0.8">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">静音</small>
+                            <small class="text-muted">最大</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceSpeed" class="form-label">
+                            <i class="fas fa-tachometer-alt me-1"></i>语音速度
+                        </label>
+                        <input type="range" class="form-range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">慢速</small>
+                            <small class="text-muted">快速</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="testVoiceBtn">
+                            <i class="fas fa-play me-1"></i>测试语音
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="saveVoiceSettingsBtn">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 添加调试信息
+        console.log('🔧 HTML页面JavaScript开始执行');
+        console.log('🔧 当前DOM状态:', document.readyState);
+        console.log('🔧 检查关键元素:');
+        console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+        console.log('  - loading:', !!document.getElementById('loading'));
+        
+        // 监听DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 DOMContentLoaded事件触发');
+            console.log('🔧 再次检查关键元素:');
+            console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+            console.log('  - loading:', !!document.getElementById('loading'));
+        });
+        
+        // 监听页面完全加载
+        window.addEventListener('load', function() {
+            console.log('🔧 页面完全加载完成');
+            console.log('🔧 window.app存在:', !!window.app);
+            
+            // 手动测试API
+            setTimeout(async () => {
+                console.log('🧪 手动测试API...');
+                try {
+                    const response = await fetch('/api/characters');
+                    console.log('🧪 API响应状态:', response.status);
+                    const data = await response.json();
+                    console.log('🧪 API数据:', data);
+                    
+                    if (data.success && data.characters) {
+                        console.log('🧪 角色数量:', data.characters.length);
+                        console.log('🧪 第一个角色:', data.characters[0]);
+                        
+                        // 手动渲染一个角色卡片
+                        const grid = document.getElementById('charactersGrid');
+                        if (grid) {
+                            const char = data.characters[0];
+                            grid.innerHTML = `
+                                <div style="border: 1px solid #ddd; padding: 20px; border-radius: 10px; text-align: center;">
+                                    <h3>${char.name}</h3>
+                                    <p>${char.category}</p>
+                                    <p>${char.background.substring(0, 100)}...</p>
+                                    <button onclick="alert('点击了${char.name}')">开始对话</button>
+                                </div>
+                            `;
+                            console.log('🧪 手动渲染完成');
+                        } else {
+                            console.error('🧪 找不到charactersGrid元素');
+                        }
+                    }
+                } catch (error) {
+                    console.error('🧪 手动测试失败:', error);
+                }
+            }, 2000);
+        });
+    </script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

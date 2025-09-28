@@ -17,20 +17,65 @@ class AIRoleplayApp {
         this.voiceSessionId = null;
         this.realtimeVoiceEnabled = false;
         
+        console.log('🎯 AIRoleplayApp 构造函数执行完成');
         this.init();
     }
 
     async init() {
-        this.bindEvents();
-        await this.loadCharacters();
-        this.setupVoiceRecording();
+        console.log('🚀 开始初始化应用...');
+        try {
+            this.bindEvents();
+            await this.loadCharacters();
+            this.setupVoiceRecording();
+            console.log('✅ 应用初始化完成');
+        } catch (error) {
+            console.error('❌ 应用初始化失败:', error);
+        }
     }
 
     bindEvents() {
+        console.log('🔗 绑定事件监听器...');
+        
         // 搜索功能
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            this.searchCharacters(e.target.value);
-        });
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchCharacters(e.target.value);
+            });
+            
+            // 点击外部隐藏搜索建议
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) {
+                    this.hideSearchSuggestions();
+                }
+            });
+            
+            // 键盘导航支持
+            searchInput.addEventListener('keydown', (e) => {
+                const suggestions = document.getElementById('searchSuggestions');
+                if (!suggestions || suggestions.style.display === 'none') return;
+                
+                const items = suggestions.querySelectorAll('.suggestion-item');
+                let activeIndex = Array.from(items).findIndex(item => item.classList.contains('active'));
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    items.forEach(item => item.classList.remove('active'));
+                    activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+                    items[activeIndex]?.classList.add('active');
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    items.forEach(item => item.classList.remove('active'));
+                    activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+                    items[activeIndex]?.classList.add('active');
+                } else if (e.key === 'Enter' && activeIndex >= 0) {
+                    e.preventDefault();
+                    items[activeIndex]?.click();
+                } else if (e.key === 'Escape') {
+                    this.hideSearchSuggestions();
+                }
+            });
+        }
 
         // 分类筛选
         document.querySelectorAll('.category-btn').forEach(btn => {
@@ -41,88 +86,263 @@ class AIRoleplayApp {
         });
 
         // 发送消息
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            this.sendMessage();
-        });
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => {
+                this.sendMessage();
+            });
+        }
 
         // 回车发送
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendMessage();
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+        }
+
+        // 语音按钮
+        const voiceBtn = document.getElementById('voiceBtn');
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', () => {
+                this.toggleVoiceRecording();
+            });
+        }
+
+        // 技能按钮
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('skill-btn')) {
+                this.showSkillModal(e.target.dataset.skill);
             }
         });
 
-        // 语音按钮
-        document.getElementById('voiceBtn').addEventListener('click', () => {
-            this.toggleVoiceRecording();
-        });
-
-        // 技能按钮
-        document.querySelectorAll('.skill-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.openSkillModal(e.target.dataset.skill);
+        // 技能执行按钮
+        const executeSkillBtn = document.getElementById('executeSkillBtn');
+        if (executeSkillBtn) {
+            executeSkillBtn.addEventListener('click', () => {
+                this.executeSkill();
             });
-        });
+        }
 
-        // 执行技能
-        document.getElementById('executeSkillBtn').addEventListener('click', () => {
-            this.executeSkill();
-        });
-
-        // 聊天模态框关闭时清理
-        document.getElementById('chatModal').addEventListener('hidden.bs.modal', () => {
-            this.currentCharacter = null;
-            this.currentSessionId = null;
-            document.getElementById('messagesContainer').innerHTML = '';
-        });
+        console.log('✅ 事件监听器绑定完成');
     }
 
     async loadCharacters() {
+        console.log('📥 开始加载角色数据...');
+        console.log('📥 当前URL:', window.location.href);
+        
         try {
             this.showLoading(true);
-            const response = await fetch('/api/characters');
-            const data = await response.json();
             
-            if (data.success) {
+            console.log('🌐 发送API请求到: /api/characters');
+            const response = await fetch('/api/characters');
+            console.log('🌐 API响应状态:', response.status);
+            console.log('🌐 API响应头:', response.headers);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('🌐 API响应错误:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log('📊 接收到的原始数据:', data);
+            console.log('📊 数据类型:', typeof data);
+            console.log('📊 数据结构:', Object.keys(data));
+            console.log('📊 success字段:', data.success, typeof data.success);
+            console.log('📊 characters字段:', data.characters, typeof data.characters, Array.isArray(data.characters));
+            
+            if (data.success && data.characters && Array.isArray(data.characters)) {
                 this.characters = data.characters;
-                this.renderCharacters(this.characters);
+                console.log('👥 成功加载角色数量:', this.characters.length);
+                console.log('👥 角色详情:', this.characters);
+                
+                if (this.characters.length > 0) {
+                    console.log('👥 第一个角色:', this.characters[0]);
+                    this.renderCharacters(this.characters);
+                } else {
+                    console.warn('⚠️ 角色数组为空');
+                    this.showEmptyState('没有可用的角色');
+                }
             } else {
-                this.showError('加载角色失败: ' + data.error);
+                console.error('❌ 数据验证失败');
+                console.error('  - success:', data.success);
+                console.error('  - characters:', data.characters);
+                console.error('  - isArray:', Array.isArray(data.characters));
+                throw new Error(data.error || '数据格式错误: success=' + data.success + ', characters=' + typeof data.characters);
             }
         } catch (error) {
-            this.showError('网络错误: ' + error.message);
+            console.error('❌ 加载角色失败:', error);
+            console.error('❌ 错误堆栈:', error.stack);
+            this.showError('加载角色失败: ' + error.message);
+            
+            // 显示错误信息到页面
+            const grid = document.getElementById('charactersGrid');
+            if (grid) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #e53e3e;">
+                        <h3>😔 角色加载失败</h3>
+                        <p><strong>错误信息:</strong> ${error.message}</p>
+                        <p><strong>请尝试:</strong></p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>检查网络连接</li>
+                            <li>确认服务器正在运行</li>
+                            <li>查看浏览器控制台错误</li>
+                        </ul>
+                        <br><br>
+                        <button onclick="window.app.loadCharacters()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            🔄 重新加载
+                        </button>
+                        <button onclick="window.open('/test', '_blank')" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+                            🧪 诊断测试
+                        </button>
+                    </div>
+                `;
+            } else {
+                console.error('❌ 找不到角色网格容器 #charactersGrid');
+                console.error('❌ 当前页面所有ID元素:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+            }
         } finally {
             this.showLoading(false);
         }
     }
+    
+    showEmptyState(message) {
+        const grid = document.getElementById('charactersGrid');
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🤔</div>
+                    <h3>${message}</h3>
+                    <p>请检查服务器配置或联系管理员</p>
+                    <button onclick="window.app.loadCharacters()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 1rem;">
+                        🔄 重新加载
+                    </button>
+                </div>
+            `;
+        }
+    }
 
     renderCharacters(characters) {
+        console.log('🎨 开始渲染角色卡片...');
+        console.log('🎨 传入的角色数据:', characters);
+        
         const grid = document.getElementById('charactersGrid');
+        console.log('🎨 找到的网格元素:', grid);
+        
+        if (!grid) {
+            console.error('❌ 找不到角色网格容器 #charactersGrid');
+            console.log('❌ 当前DOM中的所有元素ID:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+            return;
+        }
+        
+        console.log('🧹 清空网格容器');
         grid.innerHTML = '';
 
-        characters.forEach(character => {
-            const card = this.createCharacterCard(character);
-            grid.appendChild(card);
+        if (!characters || characters.length === 0) {
+            console.log('⚠️ 没有角色数据可显示');
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <div class="empty-state-icon" style="font-size: 3rem;">🤔</div>
+                    <h3>暂无匹配的角色</h3>
+                    <p>请尝试调整搜索条件或切换分类筛选</p>
+                </div>
+            `;
+            return;
+        }
+
+        console.log('🎭 开始渲染', characters.length, '个角色');
+        characters.forEach((character, index) => {
+            console.log(`🎭 渲染角色 ${index + 1}: ${character.name}`);
+            try {
+                const card = this.createCharacterCard(character);
+                grid.appendChild(card);
+                console.log(`✅ 角色 ${character.name} 渲染成功`);
+            } catch (error) {
+                console.error(`❌ 渲染角色 ${character.name} 失败:`, error);
+            }
         });
+        
+        console.log('✅ 角色卡片渲染完成，网格内容:', grid.innerHTML.length, '字符');
     }
 
     createCharacterCard(character) {
         const card = document.createElement('div');
         card.className = 'character-card';
+        
+        // 安全地获取角色属性
+        const name = character.name || '未知角色';
+        const background = character.background || '暂无背景介绍';
+        const category = character.category || 'unknown';
+        const tags = character.tags || [];
+        const id = character.id || 'unknown';
+        
+        // 简化描述为一行
+        const shortDescription = this.getShortDescription(background);
+        
+        // 获取角色头像
+        const avatarUrl = this.getCharacterAvatar(character);
+        
         card.innerHTML = `
-            <div class="character-avatar">${this.getCharacterEmoji(character.category)}</div>
-            <div class="character-name">${character.name}</div>
-            <div class="character-category">${this.getCategoryName(character.category)}</div>
-            <div class="character-description">${character.background.substring(0, 100)}...</div>
-            <div class="character-tags">
-                ${character.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            <div class="character-header">
+                <div class="character-avatar">
+                    ${avatarUrl ? `<img src="${avatarUrl}" alt="${name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+                    <div style="${avatarUrl ? 'display: none;' : 'display: flex;'} width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(category)}</div>
+                </div>
+                <div class="character-info">
+                    <h3 style="text-align: center !important; display: flex; justify-content: center; align-items: center; margin: 0 auto;">${name}</h3>
+                </div>
             </div>
-            <button class="chat-btn" onclick="app.startChat('${character.id}')">
-                <i class="fas fa-comments me-2"></i>开始对话
-            </button>
+            <div class="character-description" style="text-align: center !important;">${shortDescription}</div>
+            <div class="character-tags" style="justify-content: center !important; display: flex; align-items: center;">
+                ${tags.slice(0, 4).map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+            <div class="character-actions">
+                <button class="chat-btn" onclick="event.stopPropagation(); window.app.startChat('${id}')">
+                    <i class="fas fa-comments"></i> 开始对话
+                </button>
+            </div>
         `;
+        
+        // 添加卡片点击事件来显示角色详情
+        card.addEventListener('click', (e) => {
+            // 如果点击的是按钮，不触发卡片事件
+            if (e.target.closest('.chat-btn')) {
+                return;
+            }
+            this.showCharacterInfo(id);
+        });
+        
         return card;
+    }
+
+    getShortDescription(background) {
+        // 提取背景介绍的前40个字符作为简短描述
+        if (!background || background.length <= 40) {
+            return background || '暂无介绍';
+        }
+        return background.substring(0, 40) + '...';
+    }
+
+    getCharacterAvatar(character) {
+        // 角色头像映射，使用高质量稳定的头像图片
+        const avatarMap = {
+            'socrates': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Socrates_Louvre.jpg/300px-Socrates_Louvre.jpg',
+            'harry_potter': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d7/Harry_Potter_character_poster.jpg/220px-Harry_Potter_character_poster.jpg',
+            'einstein': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Einstein_1921_by_F_Schmutzer_-_restoration.jpg/300px-Einstein_1921_by_F_Schmutzer_-_restoration.jpg',
+            'shakespeare': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/300px-Shakespeare.jpg',
+            'confucius': '/static/images/kongzi.png',
+            'marie_curie': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Marie_Curie_c._1920s.jpg/256px-Marie_Curie_c._1920s.jpg'
+        };
+        
+        // 如果没有在映射中找到，尝试使用角色数据中的avatar字段
+        const primaryUrl = avatarMap[character.id];
+        const fallbackUrl = character.avatar;
+        
+        return primaryUrl || fallbackUrl || null;
     }
 
     getCharacterEmoji(category) {
@@ -148,25 +368,77 @@ class AIRoleplayApp {
     }
 
     searchCharacters(query) {
+        console.log('🔍 搜索角色:', query);
+        
         if (!query.trim()) {
             this.renderCharacters(this.characters);
+            this.hideSearchSuggestions();
             return;
         }
 
         const filtered = this.characters.filter(character => 
             character.name.toLowerCase().includes(query.toLowerCase()) ||
             character.background.toLowerCase().includes(query.toLowerCase()) ||
-            character.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+            character.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
+            this.getCategoryName(character.category).includes(query)
         );
 
         this.renderCharacters(filtered);
+        this.showSearchSuggestions(query, filtered);
+    }
+
+    showSearchSuggestions(query, filteredCharacters) {
+        const suggestions = document.getElementById('searchSuggestions');
+        if (!suggestions) return;
+        
+        // 显示前5个匹配的角色
+        const topMatches = filteredCharacters.slice(0, 5);
+        
+        if (topMatches.length === 0) {
+            suggestions.style.display = 'none';
+            return;
+        }
+        
+        suggestions.innerHTML = topMatches.map(character => {
+            const avatarUrl = this.getCharacterAvatar(character);
+            const avatarDisplay = avatarUrl ? 
+                `<img src="${avatarUrl}" alt="${character.name}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 0.5rem;" onerror="this.outerHTML='<span style=\'margin-right: 0.5rem; font-size: 16px;\'>${this.getCharacterEmoji(character.category)}</span>'">` :
+                `<span style="margin-right: 0.5rem; font-size: 16px;">${this.getCharacterEmoji(character.category)}</span>`;
+            
+            return `
+                <div class="suggestion-item" onclick="window.app.selectSuggestion('${character.name}')">
+                    ${avatarDisplay}
+                    <strong>${character.name}</strong>
+                </div>
+            `;
+        }).join('');
+        
+        suggestions.style.display = 'block';
+    }
+
+    hideSearchSuggestions() {
+        const suggestions = document.getElementById('searchSuggestions');
+        if (suggestions) {
+            suggestions.style.display = 'none';
+        }
+    }
+
+    selectSuggestion(characterName) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = characterName;
+            this.searchCharacters(characterName);
+            this.hideSearchSuggestions();
+        }
     }
 
     filterByCategory(category) {
         if (category === 'all') {
             this.renderCharacters(this.characters);
         } else {
-            const filtered = this.characters.filter(character => character.category === category);
+            const filtered = this.characters.filter(character => 
+                character.category === category
+            );
             this.renderCharacters(filtered);
         }
     }
@@ -179,310 +451,549 @@ class AIRoleplayApp {
     }
 
     async startChat(characterId) {
+        console.log('💬 开始与角色对话:', characterId);
+        
         try {
             const response = await fetch('/api/chat/start', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ character_id: characterId })
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.currentCharacter = data.character;
                 this.currentSessionId = data.session_id;
                 
-                // 加载语音配置
+                this.showChatModal(data.character, data.welcome_message);
                 await this.loadVoiceConfig(characterId);
-                
-                // 更新聊天界面
-                this.updateChatHeader(data.character);
-                this.clearMessages();
-                
-                // 显示欢迎消息
-                if (data.welcome_message) {
-                    this.addMessage(data.welcome_message, 'ai');
-                    
-                    // 自动播放欢迎消息语音
-                    if (this.voiceConfig && this.shouldAutoPlayVoice()) {
-                        this.playVoice(data.welcome_message);
-                    }
-                }
-                
-                // 显示聊天模态框
-                const chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
-                chatModal.show();
             } else {
                 this.showError('开始对话失败: ' + data.error);
             }
         } catch (error) {
+            console.error('❌ 开始对话失败:', error);
             this.showError('网络错误: ' + error.message);
         }
     }
 
-    updateChatHeader(character) {
-        document.getElementById('chatAvatar').textContent = this.getCharacterEmoji(character.category);
+    showChatModal(character, welcomeMessage) {
+        // 设置角色信息
         document.getElementById('chatCharacterName').textContent = character.name;
-        document.getElementById('chatCharacterCategory').textContent = this.getCategoryName(character.category);
+        
+        // 设置头像
+        const chatAvatar = document.getElementById('chatAvatar');
+        const avatarUrl = this.getCharacterAvatar(character);
+        
+        if (avatarUrl) {
+            chatAvatar.innerHTML = `<img src="${avatarUrl}" alt="${character.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(character.category)}</div>`;
+        } else {
+            chatAvatar.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem;">${this.getCharacterEmoji(character.category)}</div>`;
+        }
+
+        // 清空消息容器
+        const messagesContainer = document.getElementById('messagesContainer');
+        messagesContainer.innerHTML = '';
+
+        // 添加欢迎消息
+        if (welcomeMessage) {
+            this.addMessage(welcomeMessage, 'assistant');
+        }
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('chatModal'));
+        modal.show();
     }
 
     async sendMessage() {
-        const input = document.getElementById('messageInput');
-        const message = input.value.trim();
-        
-        if (!message || !this.currentSessionId) return;
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+
+        if (!message) return;
 
         // 添加用户消息到界面
         this.addMessage(message, 'user');
-        input.value = '';
-
-        // 显示AI正在输入
-        const typingId = this.showTyping();
+        messageInput.value = '';
 
         try {
             const response = await fetch('/api/chat/message', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ message: message })
             });
 
             const data = await response.json();
-            
-            // 移除正在输入提示
-            this.removeTyping(typingId);
-            
+
             if (data.success) {
-                this.addMessage(data.response, 'ai');
+                this.addMessage(data.response, 'assistant');
                 
-                // 自动语音播放（可选）
-                if (this.shouldAutoPlayVoice()) {
+                // 自动播放语音回复
+                if (this.voiceConfig) {
                     this.playVoice(data.response);
                 }
             } else {
-                this.addMessage('抱歉，我现在无法回复。请稍后再试。', 'ai');
+                this.showError('发送消息失败: ' + data.error);
             }
         } catch (error) {
-            this.removeTyping(typingId);
-            this.addMessage('网络连接出现问题，请检查网络后重试。', 'ai');
+            console.error('❌ 发送消息失败:', error);
+            this.showError('网络错误: ' + error.message);
         }
     }
 
-    addMessage(content, type) {
-        const container = document.getElementById('messagesContainer');
-        const message = document.createElement('div');
-        message.className = `message ${type}`;
+    addMessage(content, sender) {
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        let avatar, messageClass;
         
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.textContent = type === 'user' ? '👤' : this.getCharacterEmoji(this.currentCharacter?.category);
+        if (sender === 'user') {
+            avatar = '👤';
+            messageClass = 'user';
+        } else if (sender === 'system') {
+            avatar = '🤖';
+            messageClass = 'system';
+            messageDiv.style.cssText += `
+                background: linear-gradient(135deg, #f7fafc, #edf2f7);
+                border-left: 4px solid #667eea;
+                font-style: italic;
+                opacity: 0.9;
+            `;
+        } else {
+            avatar = this.getCharacterEmoji(this.currentCharacter?.category);
+            messageClass = 'assistant';
+        }
         
-        const messageContent = document.createElement('div');
-        messageContent.className = 'message-content';
-        messageContent.innerHTML = this.formatMessage(content);
+        const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         
-        message.appendChild(avatar);
-        message.appendChild(messageContent);
-        container.appendChild(message);
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${currentTime}</div>
+            </div>
+        `;
+
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateY(20px)';
+        messagesContainer.appendChild(messageDiv);
         
-        // 滚动到底部
-        container.scrollTop = container.scrollHeight;
+        // 动画效果
+        setTimeout(() => {
+            messageDiv.style.transition = 'all 0.3s ease';
+            messageDiv.style.opacity = '1';
+            messageDiv.style.transform = 'translateY(0)';
+        }, 10);
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    formatMessage(content) {
-        // 简单的文本格式化
-        return content
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    showLoading(show) {
+        const loading = document.getElementById('loading');
+        const grid = document.getElementById('charactersGrid');
+        
+        if (loading && grid) {
+            if (show) {
+                loading.classList.add('show');
+                grid.style.display = 'none';
+            } else {
+                loading.classList.remove('show');
+                grid.style.display = 'grid';
+            }
+        }
     }
 
-    showTyping() {
-        const typingId = 'typing-' + Date.now();
-        const container = document.getElementById('messagesContainer');
-        const typing = document.createElement('div');
-        typing.id = typingId;
-        typing.className = 'message ai';
-        typing.innerHTML = `
-            <div class="message-avatar">${this.getCharacterEmoji(this.currentCharacter?.category)}</div>
-            <div class="message-content">
-                <div class="typing-indicator">
-                    <span></span><span></span><span></span>
+    showError(message) {
+        console.error('🚨 错误:', message);
+        
+        // 创建更友好的错误提示
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+        `;
+        
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>错误：</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(errorDiv);
+        
+        // 5秒后自动移除
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+
+    showProcessingStatus(message, type = 'info') {
+        // 移除现有的状态提示
+        this.hideProcessingStatus();
+        
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'processingStatus';
+        statusDiv.className = `alert alert-${type === 'success' ? 'success' : 'info'} fade show`;
+        statusDiv.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9998;
+            max-width: 300px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        `;
+        
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-spinner fa-spin';
+        statusDiv.innerHTML = `
+            <i class="fas ${icon} me-2"></i>
+            ${message}
+        `;
+        
+        document.body.appendChild(statusDiv);
+    }
+
+    hideProcessingStatus() {
+        const statusDiv = document.getElementById('processingStatus');
+        if (statusDiv) {
+            statusDiv.remove();
+        }
+    }
+
+    async loadVoiceConfig(characterId) {
+        try {
+            console.log('🔧 加载语音配置:', characterId);
+            
+            const response = await fetch(`/api/voice/config/${characterId}?voice_type=auto`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.voiceConfig = data.config;
+                console.log('✅ 语音配置加载成功:', this.voiceConfig);
+            } else {
+                console.warn('⚠️ 语音配置加载失败:', data.error);
+                this.voiceConfig = null;
+            }
+        } catch (error) {
+            console.error('❌ 加载语音配置失败:', error);
+            this.voiceConfig = null;
+        }
+    }
+
+    async startRealtimeVoiceChat(characterId) {
+        console.log('🎙️ 启动实时语音对话:', characterId);
+        
+        try {
+            // 获取角色信息
+            const character = this.characters.find(c => c.id === characterId);
+            if (!character) {
+                this.showError('角色不存在');
+                return;
+            }
+            
+            // 检查浏览器支持
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.showError('浏览器不支持语音录制功能');
+                return;
+            }
+            
+            // 跳转到实时语音对话页面
+            const url = `/demo?character=${characterId}`;
+            window.open(url, '_blank');
+            
+        } catch (error) {
+            console.error('❌ 启动实时语音对话失败:', error);
+            this.showError('启动实时语音对话失败: ' + error.message);
+        }
+    }
+
+    showCharacterInfo(characterId) {
+        const character = this.characters.find(c => c.id === characterId);
+        if (!character) return;
+        
+        // 显示角色详情模态框
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;">
+                        <h5 class="modal-title">
+                            <span style="font-size: 1.5rem; margin-right: 0.5rem;">${this.getCharacterEmoji(character.category)}</span>
+                            ${character.name}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                <div class="character-avatar" style="width: 100px; height: 100px; font-size: 3rem; margin: 0 auto;">
+                                    ${(() => {
+                                        const avatarUrl = this.getCharacterAvatar(character);
+                                        if (avatarUrl) {
+                                            return `<img src="${avatarUrl}" alt="${character.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" onload="this.nextElementSibling.style.display='none';" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    <div style="display: none; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">${this.getCharacterEmoji(character.category)}</div>`;
+                                        } else {
+                                            return `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem;">${this.getCharacterEmoji(character.category)}</div>`;
+                                        }
+                                    })()}
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h6 style="color: var(--primary-color); font-weight: 600;">背景介绍</h6>
+                                <p style="line-height: 1.6; color: var(--text-dark);">${character.background}</p>
+                                
+                                <h6 style="color: var(--primary-color); font-weight: 600; margin-top: 1.5rem;">专业领域</h6>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    ${character.tags.map(tag => `
+                                        <span class="tag" style="background: var(--bg-secondary); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;">
+                                            ${tag}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        <button type="button" class="btn me-2" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;" 
+                                onclick="window.app.startChat('${character.id}'); bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide();">
+                            <i class="fas fa-comments me-2"></i>文字对话
+                        </button>
+                        <button type="button" class="btn" style="background: linear-gradient(135deg, var(--accent-color), #f472b6); color: white;" 
+                                onclick="window.app.startRealtimeVoiceChat('${character.id}'); bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide();">
+                            <i class="fas fa-microphone me-2"></i>语音对话
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
         
-        container.appendChild(typing);
-        container.scrollTop = container.scrollHeight;
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
         
-        return typingId;
+        // 模态框关闭后移除DOM
+        modal.addEventListener('hidden.bs.modal', () => {
+            modal.remove();
+        });
     }
 
-    removeTyping(typingId) {
-        const typing = document.getElementById(typingId);
-        if (typing) {
-            typing.remove();
+    // 语音相关功能
+    setupVoiceRecording() {
+        console.log('🎤 设置语音录制功能...');
+        
+        // 检查浏览器支持
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.warn('⚠️ 浏览器不支持语音录制');
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.disabled = true;
+                voiceBtn.title = '浏览器不支持语音录制';
+            }
+            return;
+        }
+        
+        // 初始化语音录制相关变量
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.websocket = null;
+        this.realtimeMode = false;
+        
+        console.log('✅ 语音录制功能初始化完成');
+    }
+
+    async toggleVoiceRecording() {
+        console.log('🎤 切换语音录制状态');
+        
+        if (!this.isRecording) {
+            await this.startRecording();
+        } else {
+            await this.stopRecording();
         }
     }
 
-    clearMessages() {
-        document.getElementById('messagesContainer').innerHTML = '';
-    }
-
-    setupVoiceRecording() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ 
+    async startRecording() {
+        try {
+            console.log('🎤 开始录音...');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     sampleRate: 16000,
                     channelCount: 1,
                     echoCancellation: true,
                     noiseSuppression: true
-                }
-            })
-                .then(stream => {
-                    this.audioStream = stream;
-                    this.setupAudioContext(stream);
-                    
-                    // 同时设置MediaRecorder作为备用方案
-                    const options = { mimeType: 'audio/webm;codecs=opus' };
-                    
-                    if (MediaRecorder.isTypeSupported('audio/wav')) {
-                        options.mimeType = 'audio/wav';
-                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                        options.mimeType = 'audio/webm';
-                    }
-                    
-                    this.mediaRecorder = new MediaRecorder(stream, options);
-                    
-                    this.mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0) {
-                            this.audioChunks.push(event.data);
-                        }
-                    };
-                    
-                    this.mediaRecorder.onstop = () => {
-                        this.processRecording();
-                    };
-                    
-                    console.log('语音录制初始化成功');
-                })
-                .catch(error => {
-                    console.warn('语音功能不可用:', error);
-                    this.showError('无法访问麦克风，请检查浏览器权限设置');
-                });
-        } else {
-            console.warn('浏览器不支持语音录制功能');
-        }
-    }
-
-    setupAudioContext(stream) {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 16000
+                } 
             });
-            this.source = this.audioContext.createMediaStreamSource(stream);
             
-            // 创建ScriptProcessor用于录制
-            this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-            this.recordingData = [];
+            this.mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
             
-            this.processor.onaudioprocess = (event) => {
-                if (this.isRecording) {
-                    const inputData = event.inputBuffer.getChannelData(0);
-                    // 复制数据到录制缓冲区
-                    this.recordingData.push(new Float32Array(inputData));
+            this.audioChunks = [];
+            
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
                 }
             };
             
-            console.log('Web Audio API 初始化成功');
-        } catch (error) {
-            console.warn('Web Audio API 初始化失败:', error);
-        }
-    }
-
-    toggleVoiceRecording() {
-        const voiceBtn = document.getElementById('voiceBtn');
-        
-        if (!this.mediaRecorder && !this.audioContext) {
-            this.showError('语音功能不可用，请检查麦克风权限');
-            return;
-        }
-
-        if (!this.isRecording) {
-            // 开始录音
-            this.audioChunks = [];
-            this.recordingData = [];
+            this.mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                await this.processRecordedAudio(audioBlob);
+            };
             
-            // 优先使用Web Audio API录制WAV格式
-            if (this.audioContext && this.processor) {
-                console.log('使用Web Audio API录制WAV格式');
-                this.source.connect(this.processor);
-                this.processor.connect(this.audioContext.destination);
-                this.useWebAudio = true;
-            } else if (this.mediaRecorder) {
-                console.log('使用MediaRecorder录制');
-                this.mediaRecorder.start();
-                this.useWebAudio = false;
-            }
-            
+            this.mediaRecorder.start();
             this.isRecording = true;
             
-            voiceBtn.classList.add('recording');
-            voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
-            voiceBtn.title = '停止录音';
-        } else {
-            // 停止录音
-            this.isRecording = false;
-            
-            if (this.useWebAudio && this.processor) {
-                this.processor.disconnect();
-                this.source.disconnect();
-                // 直接处理Web Audio API的数据
-                this.processWebAudioRecording();
-            } else if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-                this.mediaRecorder.stop();
-                // processRecording会在onstop事件中被调用
+            // 更新UI
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-stop"></i>';
             }
             
-            voiceBtn.classList.remove('recording');
-            voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-            voiceBtn.title = '语音输入';
+            console.log('✅ 录音已开始');
+            
+        } catch (error) {
+            console.error('❌ 开始录音失败:', error);
+            this.showError('无法访问麦克风，请检查权限设置');
         }
     }
 
-    processWebAudioRecording() {
-        if (this.recordingData.length === 0) {
-            this.showError('录音数据为空，请重新录制');
-            return;
+    async stopRecording() {
+        if (this.mediaRecorder && this.isRecording) {
+            console.log('🛑 停止录音...');
+            
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            
+            // 停止所有音频轨道
+            if (this.mediaRecorder.stream) {
+                this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+            
+            // 更新UI
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('recording');
+                voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            }
+            
+            console.log('✅ 录音已停止');
         }
-
-        console.log('处理Web Audio录音数据...');
-        
-        // 合并所有录制的数据
-        let totalLength = 0;
-        for (let i = 0; i < this.recordingData.length; i++) {
-            totalLength += this.recordingData[i].length;
-        }
-        
-        const mergedData = new Float32Array(totalLength);
-        let offset = 0;
-        for (let i = 0; i < this.recordingData.length; i++) {
-            mergedData.set(this.recordingData[i], offset);
-            offset += this.recordingData[i].length;
-        }
-        
-        // 转换为WAV格式
-        const wavBlob = this.floatArrayToWav(mergedData, 16000);
-        this.sendAudioToServer(wavBlob, 'recording.wav');
     }
 
-    floatArrayToWav(floatArray, sampleRate) {
-        const length = floatArray.length;
-        const buffer = new ArrayBuffer(44 + length * 2);
-        const view = new DataView(buffer);
+    async processRecordedAudio(audioBlob) {
+        try {
+            console.log('🎵 处理录音数据...');
+            
+            // 显示处理中状态
+            this.showProcessingStatus('正在识别语音...');
+            
+            // 尝试转换为WAV格式
+            const wavBlob = await this.convertToWav(audioBlob);
+            
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('audio', wavBlob, 'recording.wav');
+            
+            // 发送到服务器进行语音识别
+            const response = await fetch('/api/voice/enhanced/recognize', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.text) {
+                // 将识别的文字填入输入框
+                const messageInput = document.getElementById('messageInput');
+                if (messageInput) {
+                    messageInput.value = data.text;
+                    console.log('✅ 语音识别成功:', data.text);
+                    
+                    // 自动发送消息（可选）
+                    if (data.text.trim()) {
+                        setTimeout(() => {
+                            this.sendMessage();
+                        }, 500);
+                    }
+                }
+                this.hideProcessingStatus();
+            } else {
+                this.hideProcessingStatus();
+                this.showError(data.error || '语音识别失败');
+            }
+            
+        } catch (error) {
+            console.error('❌ 处理录音失败:', error);
+            this.hideProcessingStatus();
+            this.showError('语音处理失败: ' + error.message);
+        }
+    }
+
+    async convertToWav(audioBlob) {
+        return new Promise((resolve, reject) => {
+            try {
+                // 创建音频上下文
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 读取音频数据
+                const fileReader = new FileReader();
+                fileReader.onload = async (e) => {
+                    try {
+                        // 解码音频数据
+                        const arrayBuffer = e.target.result;
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // 转换为WAV格式
+                        const wavBuffer = this.audioBufferToWav(audioBuffer);
+                        const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                        
+                        resolve(wavBlob);
+                    } catch (error) {
+                        console.warn('⚠️ 音频转换失败，使用原始格式:', error);
+                        resolve(audioBlob); // 如果转换失败，使用原始格式
+                    }
+                };
+                
+                fileReader.onerror = () => {
+                    console.warn('⚠️ 文件读取失败，使用原始格式');
+                    resolve(audioBlob); // 如果读取失败，使用原始格式
+                };
+                
+                fileReader.readAsArrayBuffer(audioBlob);
+                
+            } catch (error) {
+                console.warn('⚠️ 音频处理失败，使用原始格式:', error);
+                resolve(audioBlob); // 如果处理失败，使用原始格式
+            }
+        });
+    }
+
+    audioBufferToWav(buffer) {
+        const length = buffer.length;
+        const sampleRate = buffer.sampleRate;
+        const numberOfChannels = buffer.numberOfChannels;
+        
+        // 创建WAV文件头
+        const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+        const view = new DataView(arrayBuffer);
         
         // WAV文件头
         const writeString = (offset, string) => {
@@ -492,750 +1003,882 @@ class AIRoleplayApp {
         };
         
         writeString(0, 'RIFF');
-        view.setUint32(4, 36 + length * 2, true);
+        view.setUint32(4, 36 + length * numberOfChannels * 2, true);
         writeString(8, 'WAVE');
         writeString(12, 'fmt ');
         view.setUint32(16, 16, true);
         view.setUint16(20, 1, true);
-        view.setUint16(22, 1, true);
+        view.setUint16(22, numberOfChannels, true);
         view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * 2, true);
-        view.setUint16(32, 2, true);
+        view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+        view.setUint16(32, numberOfChannels * 2, true);
         view.setUint16(34, 16, true);
         writeString(36, 'data');
-        view.setUint32(40, length * 2, true);
+        view.setUint32(40, length * numberOfChannels * 2, true);
         
-        // 转换浮点数据为16位PCM
+        // 写入音频数据
         let offset = 44;
         for (let i = 0; i < length; i++) {
-            const sample = Math.max(-1, Math.min(1, floatArray[i]));
-            view.setInt16(offset, sample * 0x7FFF, true);
-            offset += 2;
-        }
-        
-        return new Blob([buffer], { type: 'audio/wav' });
-    }
-
-    async processRecording() {
-        if (this.audioChunks.length === 0) {
-            this.showError('录音数据为空，请重新录制');
-            return;
-        }
-
-        // 确定音频格式
-        let mimeType = 'audio/webm';
-        let filename = 'recording.webm';
-        
-        if (this.mediaRecorder && this.mediaRecorder.mimeType) {
-            mimeType = this.mediaRecorder.mimeType;
-            if (mimeType.includes('wav')) {
-                filename = 'recording.wav';
-            } else if (mimeType.includes('webm')) {
-                filename = 'recording.webm';
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
             }
         }
-
-        const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         
-        // 检查音频大小
-        if (audioBlob.size < 1000) {
-            this.showError('录音时间太短，请重新录制');
-            return;
-        }
-        
-        console.log('处理MediaRecorder录音:', {
-            size: audioBlob.size,
-            type: mimeType,
-            chunks: this.audioChunks.length
-        });
-
-        this.sendAudioToServer(audioBlob, filename);
+        return arrayBuffer;
     }
 
-    async sendAudioToServer(audioBlob, filename) {
-        const formData = new FormData();
-        formData.append('audio', audioBlob, filename);
-
-        // 显示处理中状态
-        const messageInput = document.getElementById('messageInput');
-        const originalPlaceholder = messageInput.placeholder;
-        messageInput.placeholder = '正在识别语音...';
-        messageInput.disabled = true;
-
-        try {
-            const response = await fetch('/api/voice/recognize', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-            
-            if (data.success && data.text) {
-                messageInput.value = data.text;
-                console.log('语音识别成功:', data.text);
-            } else {
-                this.showError(data.error || '语音识别失败，请重试');
-                console.error('语音识别失败:', data);
-            }
-        } catch (error) {
-            this.showError('语音识别出错: ' + error.message);
-            console.error('语音识别网络错误:', error);
-        } finally {
-            // 恢复输入框状态
-            messageInput.placeholder = originalPlaceholder;
-            messageInput.disabled = false;
-            
-            // 清空录音数据
-            this.audioChunks = [];
-            this.recordingData = [];
-        }
-    }
-
-    async playVoice(text) {
-        try {
-            const response = await fetch('/api/voice/synthesize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    text: text,
-                    character_id: this.currentCharacter?.id 
-                })
-            });
-
-            const data = await response.json();
-            
-            if (data.success && data.audio_url) {
-                const audio = new Audio(data.audio_url);
-                audio.play().catch(error => {
-                    console.warn('音频播放失败:', error);
-                });
-            }
-        } catch (error) {
-            console.warn('语音合成失败:', error);
-        }
-    }
-
-    shouldAutoPlayVoice() {
-        // 可以添加用户设置来控制是否自动播放语音
-        return false;
-    }
-
-    openSkillModal(skillName) {
-        const modal = document.getElementById('skillModal');
-        const title = document.getElementById('skillModalTitle');
-        const body = document.getElementById('skillModalBody');
-        
-        title.textContent = this.getSkillTitle(skillName);
-        body.innerHTML = this.getSkillForm(skillName);
-        
-        // 为语言练习添加事件监听器
-        if (skillName === 'language_practice') {
-            setTimeout(() => {
-                const topicSelect = document.getElementById('skillTopic');
-                const customTopicDiv = document.getElementById('customTopicDiv');
-                
-                if (topicSelect && customTopicDiv) {
-                    topicSelect.addEventListener('change', (e) => {
-                        if (e.target.value === '自定义') {
-                            customTopicDiv.style.display = 'block';
-                        } else {
-                            customTopicDiv.style.display = 'none';
-                        }
-                    });
-                }
-            }, 100);
-        }
-        
-        const skillModal = new bootstrap.Modal(modal);
-        skillModal.show();
-        
-        // 保存当前技能
-        modal.dataset.currentSkill = skillName;
-    }
-
-    getSkillTitle(skillName) {
-        const titles = {
-            'knowledge_qa': '知识问答',
-            'emotional_support': '情感陪伴',
-            'teaching_guidance': '教学指导',
-            'creative_writing': '创作协助',
-            'language_practice': '语言练习'
-        };
-        return titles[skillName] || '技能';
-    }
-
-    getSkillForm(skillName) {
-        const forms = {
-            'knowledge_qa': `
-                <div class="mb-3">
-                    <label class="form-label">请输入你的问题：</label>
-                    <textarea class="form-control" id="skillQuestion" rows="3" placeholder="例如：请解释相对论的基本原理"></textarea>
-                </div>
-            `,
-            'emotional_support': `
-                <div class="mb-3">
-                    <label class="form-label">当前情绪状态：</label>
-                    <select class="form-select" id="skillEmotion">
-                        <option value="sad">难过</option>
-                        <option value="anxious">焦虑</option>
-                        <option value="confused">困惑</option>
-                        <option value="lonely">孤独</option>
-                        <option value="stressed">压力大</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">想要分享的内容：</label>
-                    <textarea class="form-control" id="skillMessage" rows="3" placeholder="告诉我你的感受..."></textarea>
-                </div>
-            `,
-            'teaching_guidance': `
-                <div class="mb-3">
-                    <label class="form-label">学习主题：</label>
-                    <input type="text" class="form-control" id="skillTopic" placeholder="例如：量子物理、哲学思辨、文学创作">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">学习水平：</label>
-                    <select class="form-select" id="skillLevel">
-                        <option value="beginner">初学者</option>
-                        <option value="intermediate">中级</option>
-                        <option value="advanced">高级</option>
-                    </select>
-                </div>
-            `,
-            'creative_writing': `
-                <div class="mb-3">
-                    <label class="form-label">创作类型：</label>
-                    <select class="form-select" id="skillType">
-                        <option value="story">故事</option>
-                        <option value="poem">诗歌</option>
-                        <option value="essay">散文</option>
-                        <option value="dialogue">对话</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">主题：</label>
-                    <input type="text" class="form-control" id="skillTheme" placeholder="例如：友谊、成长、科幻">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">风格要求：</label>
-                    <input type="text" class="form-control" id="skillStyle" placeholder="例如：温馨、悬疑、幽默">
-                </div>
-            `,
-            'language_practice': `
-                <div class="mb-3">
-                    <label class="form-label">目标语言：</label>
-                    <select class="form-select" id="skillLanguage">
-                        <option value="Chinese">中文</option>
-                        <option value="English">英语</option>
-                        <option value="French">法语</option>
-                        <option value="German">德语</option>
-                        <option value="Spanish">西班牙语</option>
-                        <option value="Japanese">日语</option>
-                        <option value="Korean">韩语</option>
-                        <option value="Russian">俄语</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">练习类型：</label>
-                    <select class="form-select" id="skillPracticeType">
-                        <option value="conversation">对话练习</option>
-                        <option value="grammar">语法练习</option>
-                        <option value="vocabulary">词汇练习</option>
-                        <option value="pronunciation">发音练习</option>
-                        <option value="writing">写作练习</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">话题：</label>
-                    <select class="form-select" id="skillTopic">
-                        <option value="日常生活">日常生活</option>
-                        <option value="工作职场">工作职场</option>
-                        <option value="旅行出游">旅行出游</option>
-                        <option value="文化交流">文化交流</option>
-                        <option value="中华传统文化">中华传统文化</option>
-                        <option value="现代科技">现代科技</option>
-                        <option value="美食文化">美食文化</option>
-                        <option value="节日庆典">节日庆典</option>
-                        <option value="学习教育">学习教育</option>
-                        <option value="家庭生活">家庭生活</option>
-                        <option value="自定义">自定义话题</option>
-                    </select>
-                </div>
-                <div class="mb-3" id="customTopicDiv" style="display: none;">
-                    <label class="form-label">自定义话题：</label>
-                    <input type="text" class="form-control" id="customTopic" placeholder="请输入您想练习的话题">
-                </div>
-            `
-        };
-        return forms[skillName] || '<p>技能表单加载中...</p>';
-    }
-
-    async executeSkill() {
-        const modal = document.getElementById('skillModal');
-        const skillName = modal.dataset.currentSkill;
-        
-        if (!skillName || !this.currentCharacter) return;
-
-        const skillData = this.getSkillData(skillName);
-        
-        try {
-            const response = await fetch(`/api/skills/${skillName}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(skillData)
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                // 关闭技能模态框
-                bootstrap.Modal.getInstance(modal).hide();
-                
-                // 在聊天中显示技能结果
-                this.addMessage(`使用了${this.getSkillTitle(skillName)}技能`, 'user');
-                this.addMessage(data.result.answer || data.result.lesson || data.result.creation || data.result.support_message || data.result.practice_content, 'ai');
-            } else {
-                this.showError('技能执行失败: ' + data.error);
-            }
-        } catch (error) {
-            this.showError('网络错误: ' + error.message);
-        }
-    }
-
-    getSkillData(skillName) {
-        const data = {};
-        
-        switch (skillName) {
-            case 'knowledge_qa':
-                data.question = document.getElementById('skillQuestion')?.value || '';
-                break;
-            case 'emotional_support':
-                data.emotion = document.getElementById('skillEmotion')?.value || '';
-                data.message = document.getElementById('skillMessage')?.value || '';
-                break;
-            case 'teaching_guidance':
-                data.topic = document.getElementById('skillTopic')?.value || '';
-                data.level = document.getElementById('skillLevel')?.value || 'beginner';
-                break;
-            case 'creative_writing':
-                data.type = document.getElementById('skillType')?.value || 'story';
-                data.theme = document.getElementById('skillTheme')?.value || '';
-                data.style = document.getElementById('skillStyle')?.value || '';
-                break;
-            case 'language_practice':
-                data.language = document.getElementById('skillLanguage')?.value || 'Chinese';
-                data.type = document.getElementById('skillPracticeType')?.value || 'conversation';
-                const topicSelect = document.getElementById('skillTopic')?.value || '日常生活';
-                if (topicSelect === '自定义') {
-                    data.topic = document.getElementById('customTopic')?.value || '日常生活';
-                } else {
-                    data.topic = topicSelect;
-                }
-                break;
-        }
-        
-        return data;
-    }
-
-    showLoading(show) {
-        const loading = document.getElementById('loading');
-        const grid = document.getElementById('charactersGrid');
-        
-        if (show) {
-            loading.style.display = 'block';
-            grid.style.display = 'none';
-        } else {
-            loading.style.display = 'none';
-            grid.style.display = 'grid';
-        }
-    }
-
-    showError(message) {
-        // 简单的错误提示，可以替换为更好的UI组件
-        alert(message);
-    }
-}
-
-// 初始化应用
-const app = new AIRoleplayApp();
-
-// 添加CSS动画样式
-const style = document.createElement('style');
-style.textContent = `
-    .typing-indicator {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-    
-    .typing-indicator span {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #999;
-        animation: typing 1.4s infinite ease-in-out;
-    }
-    
-    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes typing {
-        0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-        40% { transform: scale(1); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);    // 语音配置
-相关方法
     async loadVoiceConfig(characterId) {
+        console.log('🔊 加载语音配置:', characterId);
+        
         try {
-            console.log('加载角色语音配置:', characterId);
-            
             const response = await fetch(`/api/voice/config/${characterId}?voice_type=auto`);
             const data = await response.json();
             
             if (data.success) {
                 this.voiceConfig = data.config;
-                console.log('语音配置加载成功:', this.voiceConfig);
+                console.log('✅ 语音配置加载成功');
                 
-                // 添加语音控制按钮到聊天界面
-                this.addVoiceControls();
-            } else {
-                console.warn('语音配置加载失败:', data.error);
+                // 添加实时语音按钮
+                this.addRealtimeVoiceButton();
             }
+            
         } catch (error) {
-            console.warn('语音配置加载错误:', error);
+            console.error('❌ 加载语音配置失败:', error);
         }
     }
 
-    addVoiceControls() {
+    addRealtimeVoiceButton() {
         const skillsSection = document.getElementById('skillsSection');
-        
-        // 检查是否已经添加了语音控制
-        if (document.getElementById('voiceControls')) {
-            return;
+        if (skillsSection && !document.getElementById('realtimeVoiceBtn')) {
+            const realtimeBtn = document.createElement('button');
+            realtimeBtn.id = 'realtimeVoiceBtn';
+            realtimeBtn.className = 'skill-btn';
+            realtimeBtn.innerHTML = '🎙️ 实时语音对话';
+            realtimeBtn.onclick = () => this.toggleRealtimeVoice();
+            
+            skillsSection.appendChild(realtimeBtn);
         }
-        
-        const voiceControls = document.createElement('div');
-        voiceControls.id = 'voiceControls';
-        voiceControls.className = 'voice-controls mt-2';
-        voiceControls.innerHTML = `
-            <small class="text-muted">语音功能：</small>
-            <div class="mt-2">
-                <button class="skill-btn" id="toggleAutoVoice" onclick="app.toggleAutoVoice()">
-                    <i class="fas fa-volume-up"></i> 自动语音播放
-                </button>
-                <button class="skill-btn" id="startRealtimeVoice" onclick="app.startRealtimeVoice()">
-                    <i class="fas fa-phone"></i> 实时语音对话
-                </button>
-                <button class="skill-btn" onclick="app.testVoice()">
-                    <i class="fas fa-play"></i> 测试语音
-                </button>
-            </div>
-        `;
-        
-        skillsSection.appendChild(voiceControls);
     }
 
-    toggleAutoVoice() {
-        this.autoVoiceEnabled = !this.autoVoiceEnabled;
-        const btn = document.getElementById('toggleAutoVoice');
-        
-        if (this.autoVoiceEnabled) {
-            btn.classList.add('active');
-            btn.innerHTML = '<i class="fas fa-volume-up"></i> 自动语音播放 (开)';
-            this.showInfo('自动语音播放已开启');
+    async toggleRealtimeVoice() {
+        if (!this.realtimeMode) {
+            await this.startRealtimeVoice();
         } else {
-            btn.classList.remove('active');
-            btn.innerHTML = '<i class="fas fa-volume-up"></i> 自动语音播放 (关)';
-            this.showInfo('自动语音播放已关闭');
+            await this.stopRealtimeVoice();
         }
     }
 
     async startRealtimeVoice() {
-        if (this.realtimeVoiceEnabled) {
-            this.stopRealtimeVoice();
-            return;
-        }
-
         try {
-            console.log('启动实时语音对话...');
+            console.log('🌐 启动实时语音对话...');
+            
+            if (!this.currentCharacter) {
+                this.showError('请先选择一个角色');
+                return;
+            }
+            
+            // 检查麦克风权限
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.showError('浏览器不支持麦克风访问');
+                return;
+            }
             
             // 获取实时语音配置
-            const response = await fetch('/api/voice/realtime/start', {
+            const response = await fetch('/api/realtime/start', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    character_id: this.currentCharacter.id,
-                    voice_type: 'auto'
+                body: JSON.stringify({
+                    character_id: this.currentCharacter.id
                 })
             });
-
+            
             const data = await response.json();
             
-            if (data.success) {
-                this.voiceSessionId = data.session_id;
-                
-                // 连接WebSocket
-                await this.connectVoiceWebSocket(data.ws_config, data.session_config);
-                
-                this.realtimeVoiceEnabled = true;
-                this.updateRealtimeVoiceButton(true);
-                this.showInfo('实时语音对话已启动');
-            } else {
-                this.showError('启动实时语音失败: ' + data.error);
+            if (!data.success) {
+                this.showError(data.error || '启动实时语音失败');
+                return;
             }
+            
+            // 连接WebSocket
+            await this.connectWebSocket(data.websocket_url);
+            
+            // 启动连续语音识别
+            await this.startContinuousRecording();
+            
+            this.realtimeMode = true;
+            this.updateRealtimeVoiceButton(true);
+            
+            // 显示实时语音状态
+            this.showRealtimeStatus(true);
+            
+            console.log('✅ 实时语音对话已启动');
+            
         } catch (error) {
-            this.showError('实时语音启动错误: ' + error.message);
+            console.error('❌ 启动实时语音失败:', error);
+            this.showError('启动实时语音失败: ' + error.message);
         }
     }
 
-    async connectVoiceWebSocket(wsConfig, sessionConfig) {
-        try {
-            const url = wsConfig.base_url;
-            
-            // 创建WebSocket连接
-            this.websocket = new WebSocket(url);
-            
-            // 设置请求头（注意：WebSocket不能直接设置自定义头，需要通过URL参数或其他方式）
-            // 这里我们需要修改连接方式
-            
-            this.websocket.onopen = () => {
-                console.log('WebSocket连接成功');
+    async connectWebSocket(url) {
+        return new Promise((resolve, reject) => {
+            try {
+                this.websocket = new WebSocket(url);
+                this.websocketUrl = url;
                 
-                // 发送会话开始请求
-                const startMessage = {
-                    type: 'start_session',
-                    data: sessionConfig
+                this.websocket.onopen = () => {
+                    console.log('🔌 WebSocket连接成功');
+                    
+                    // 发送开始会话消息
+                    this.websocket.send(JSON.stringify({
+                        type: 'start_voice_session',
+                        character_id: this.currentCharacter.id,
+                        config: this.voiceConfig || {}
+                    }));
+                    
+                    // 启动心跳检测
+                    this.startHeartbeat();
+                    
+                    resolve();
                 };
                 
-                this.websocket.send(JSON.stringify(startMessage));
-            };
-            
-            this.websocket.onmessage = (event) => {
-                this.handleVoiceMessage(event.data);
-            };
-            
-            this.websocket.onclose = () => {
-                console.log('WebSocket连接关闭');
-                this.realtimeVoiceEnabled = false;
-                this.updateRealtimeVoiceButton(false);
-            };
-            
-            this.websocket.onerror = (error) => {
-                console.error('WebSocket错误:', error);
-                this.showError('语音连接错误');
-            };
-            
-        } catch (error) {
-            console.error('WebSocket连接失败:', error);
-            throw error;
-        }
-    }
-
-    handleVoiceMessage(messageData) {
-        try {
-            const data = JSON.parse(messageData);
-            
-            switch (data.type) {
-                case 'session_started':
-                    console.log('语音会话已开始');
-                    break;
-                    
-                case 'audio':
-                    // 处理接收到的音频数据
-                    this.playReceivedAudio(data.data);
-                    break;
-                    
-                case 'text':
-                    // 处理接收到的文本消息
-                    if (data.data && data.data.text) {
-                        this.addMessage(data.data.text, 'ai');
+                this.websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('❌ 解析WebSocket消息失败:', error);
                     }
-                    break;
+                };
+                
+                this.websocket.onclose = (event) => {
+                    console.log('🔌 WebSocket连接关闭', event.code, event.reason);
+                    this.stopHeartbeat();
                     
-                case 'error':
-                    console.error('语音服务错误:', data.message);
-                    this.showError('语音服务错误: ' + data.message);
-                    break;
-                    
-                default:
-                    console.log('未知消息类型:', data.type);
+                    if (this.realtimeMode && event.code !== 1000) {
+                        // 非正常关闭，尝试重连
+                        console.log('🔄 尝试重新连接WebSocket...');
+                        setTimeout(() => {
+                            if (this.realtimeMode) {
+                                this.reconnectWebSocket();
+                            }
+                        }, 3000);
+                    } else {
+                        this.realtimeMode = false;
+                        this.updateRealtimeVoiceButton(false);
+                        this.showRealtimeStatus(false);
+                    }
+                };
+                
+                this.websocket.onerror = (error) => {
+                    console.error('❌ WebSocket错误:', error);
+                    reject(error);
+                };
+                
+            } catch (error) {
+                reject(error);
             }
+        });
+    }
+
+    async reconnectWebSocket() {
+        try {
+            if (this.websocket) {
+                this.websocket.close();
+            }
+            
+            await this.connectWebSocket(this.websocketUrl);
+            console.log('✅ WebSocket重连成功');
+            
         } catch (error) {
-            console.error('处理语音消息错误:', error);
+            console.error('❌ WebSocket重连失败:', error);
+            if (this.realtimeMode) {
+                setTimeout(() => this.reconnectWebSocket(), 5000);
+            }
         }
     }
 
-    playReceivedAudio(audioData) {
+    startHeartbeat() {
+        this.heartbeatInterval = setInterval(() => {
+            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                this.websocket.send(JSON.stringify({
+                    type: 'ping',
+                    timestamp: Date.now()
+                }));
+            }
+        }, 30000); // 每30秒发送一次心跳
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+
+    handleWebSocketMessage(message) {
+        console.log('📨 收到WebSocket消息:', message.type);
+        
+        switch (message.type) {
+            case 'connection_established':
+                console.log('✅ WebSocket连接已建立');
+                break;
+                
+            case 'voice_session_started':
+                console.log('✅ 语音会话已开始');
+                this.addMessage('🎤 实时语音对话已启动，请开始说话...', 'system');
+                break;
+                
+            case 'audio_processed':
+                if (message.result && message.result.type === 'speech_recognized') {
+                    const recognizedText = message.result.text;
+                    if (recognizedText && recognizedText.trim()) {
+                        this.addMessage(recognizedText, 'user');
+                        console.log('🎤 识别到语音:', recognizedText);
+                    }
+                }
+                break;
+                
+            case 'ai_text_response':
+                this.addMessage(message.text, 'assistant');
+                break;
+                
+            case 'ai_voice_response':
+                this.addMessage(message.text, 'assistant');
+                if (message.audio_url) {
+                    this.playAudioUrl(message.audio_url);
+                }
+                break;
+                
+            case 'voice_session_stopped':
+                console.log('✅ 语音会话已停止');
+                this.addMessage('🛑 实时语音对话已结束', 'system');
+                break;
+                
+            case 'error':
+                console.error('❌ WebSocket错误:', message.message);
+                this.showError('语音服务错误: ' + message.message);
+                break;
+                
+            case 'pong':
+                console.log('🏓 收到pong响应');
+                break;
+                
+            default:
+                console.log('ℹ️ 未处理的消息类型:', message.type, message);
+        }
+    }
+
+    playAudioUrl(audioUrl) {
         try {
-            // 将十六进制字符串转换为音频数据并播放
-            const audioBytes = this.hexToBytes(audioData);
-            const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
-            const audioUrl = URL.createObjectURL(audioBlob);
+            console.log('🔊 播放音频:', audioUrl);
             
             const audio = new Audio(audioUrl);
+            audio.volume = 0.8;
+            
+            audio.onloadstart = () => console.log('🔊 开始加载音频');
+            audio.oncanplay = () => console.log('🔊 音频可以播放');
+            audio.onended = () => console.log('🔊 音频播放完成');
+            audio.onerror = (e) => console.error('❌ 音频播放失败:', e);
+            
             audio.play().catch(error => {
-                console.warn('音频播放失败:', error);
+                console.error('❌ 音频播放失败:', error);
+                this.showError('音频播放失败，请检查浏览器设置');
             });
             
-            // 清理URL对象
-            audio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-            };
         } catch (error) {
-            console.error('播放接收音频错误:', error);
+            console.error('❌ 播放音频失败:', error);
         }
     }
 
-    hexToBytes(hex) {
-        const bytes = new Uint8Array(hex.length / 2);
-        for (let i = 0; i < hex.length; i += 2) {
-            bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    async stopRealtimeVoice() {
+        try {
+            console.log('🛑 停止实时语音对话...');
+            
+            // 停止连续录音
+            this.stopContinuousRecording();
+            
+            if (this.websocket) {
+                this.websocket.send(JSON.stringify({
+                    type: 'stop_voice_session'
+                }));
+                
+                this.websocket.close();
+                this.websocket = null;
+            }
+            
+            this.realtimeMode = false;
+            this.updateRealtimeVoiceButton(false);
+            this.showRealtimeStatus(false);
+            
+            console.log('✅ 实时语音对话已停止');
+            
+        } catch (error) {
+            console.error('❌ 停止实时语音失败:', error);
         }
-        return bytes;
     }
 
-    stopRealtimeVoice() {
-        if (this.websocket) {
-            this.websocket.close();
-            this.websocket = null;
-        }
-        
-        this.realtimeVoiceEnabled = false;
-        this.voiceSessionId = null;
-        this.updateRealtimeVoiceButton(false);
-        this.showInfo('实时语音对话已停止');
-    }
-
-    updateRealtimeVoiceButton(enabled) {
-        const btn = document.getElementById('startRealtimeVoice');
+    updateRealtimeVoiceButton(active) {
+        const btn = document.getElementById('realtimeVoiceBtn');
         if (btn) {
-            if (enabled) {
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-phone-slash"></i> 停止语音对话';
+            if (active) {
+                btn.innerHTML = '🛑 停止实时对话';
+                btn.style.backgroundColor = '#e53e3e';
             } else {
-                btn.classList.remove('active');
-                btn.innerHTML = '<i class="fas fa-phone"></i> 实时语音对话';
+                btn.innerHTML = '🎙️ 实时语音对话';
+                btn.style.backgroundColor = '';
             }
         }
     }
 
-    async testVoice() {
-        if (!this.voiceConfig) {
-            this.showError('语音配置未加载');
-            return;
-        }
-        
-        const testText = `你好，我是${this.currentCharacter.name}，很高兴与你对话！`;
-        await this.playVoice(testText);
-    }
-
-    shouldAutoPlayVoice() {
-        return this.autoVoiceEnabled || false;
-    }
-
-    showInfo(message) {
-        // 简单的信息提示
-        console.log('Info:', message);
-        
-        // 可以添加更好的UI提示
-        const toast = document.createElement('div');
-        toast.className = 'toast-message info';
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #17a2b8;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 9999;
-        `;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
-
-    // 重写语音播放方法以支持字节跳动TTS
-    async playVoice(text) {
+    async startContinuousRecording() {
         try {
-            console.log('播放语音:', text.substring(0, 50) + '...');
+            console.log('🎤 启动连续语音识别...');
             
-            const response = await fetch('/api/voice/synthesize', {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                } 
+            });
+            
+            this.continuousRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            this.continuousRecorder.ondataavailable = async (event) => {
+                if (event.data.size > 0 && this.websocket && this.realtimeMode) {
+                    // 转换音频并发送到WebSocket
+                    const wavBlob = await this.convertToWav(event.data);
+                    const arrayBuffer = await wavBlob.arrayBuffer();
+                    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                    
+                    this.websocket.send(JSON.stringify({
+                        type: 'audio_data',
+                        audio_data: base64Audio
+                    }));
+                }
+            };
+            
+            // 每500ms发送一次音频数据
+            this.continuousRecorder.start(500);
+            this.continuousStream = stream;
+            
+            console.log('✅ 连续语音识别已启动');
+            
+        } catch (error) {
+            console.error('❌ 启动连续录音失败:', error);
+            this.showError('无法访问麦克风: ' + error.message);
+        }
+    }
+
+    stopContinuousRecording() {
+        try {
+            if (this.continuousRecorder) {
+                this.continuousRecorder.stop();
+                this.continuousRecorder = null;
+            }
+            
+            if (this.continuousStream) {
+                this.continuousStream.getTracks().forEach(track => track.stop());
+                this.continuousStream = null;
+            }
+            
+            console.log('✅ 连续语音识别已停止');
+            
+        } catch (error) {
+            console.error('❌ 停止连续录音失败:', error);
+        }
+    }
+
+    showRealtimeStatus(active) {
+        let statusDiv = document.getElementById('realtimeStatus');
+        
+        if (active) {
+            if (!statusDiv) {
+                statusDiv = document.createElement('div');
+                statusDiv.id = 'realtimeStatus';
+                statusDiv.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    color: white;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+                    z-index: 1000;
+                    min-width: 250px;
+                    animation: slideInRight 0.3s ease;
+                `;
+                document.body.appendChild(statusDiv);
+            }
+            
+            statusDiv.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <div class="pulse-dot" style="width: 12px; height: 12px; background: #48bb78; border-radius: 50%; margin-right: 0.5rem; animation: pulse 1.5s infinite;"></div>
+                    <strong>实时语音对话中</strong>
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">
+                    🎤 正在监听语音输入<br>
+                    🤖 与 ${this.currentCharacter?.name || '角色'} 对话中
+                </div>
+            `;
+            
+            // 添加CSS动画
+            if (!document.getElementById('realtimeStatusCSS')) {
+                const style = document.createElement('style');
+                style.id = 'realtimeStatusCSS';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+        } else {
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+        }
+    }
+
+    async playVoice(text) {
+        console.log('🔊 播放语音:', text.substring(0, 50) + '...');
+        
+        try {
+            const response = await fetch('/api/voice/enhanced/synthesize', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     text: text,
-                    character_id: this.currentCharacter?.id 
+                    character_id: this.currentCharacter?.id
                 })
             });
-
+            
             const data = await response.json();
             
             if (data.success && data.audio_url) {
-                const audio = new Audio(data.audio_url);
-                
-                // 添加播放状态指示
-                const playingIndicator = this.showPlayingIndicator();
-                
-                audio.onended = () => {
-                    this.hidePlayingIndicator(playingIndicator);
-                };
-                
-                audio.onerror = () => {
-                    this.hidePlayingIndicator(playingIndicator);
-                    console.warn('音频播放失败');
-                };
-                
-                await audio.play();
-            } else {
-                console.warn('语音合成失败:', data.error);
+                this.playAudioUrl(data.audio_url);
             }
+            
         } catch (error) {
-            console.warn('语音播放失败:', error);
+            console.error('❌ 语音播放失败:', error);
         }
     }
 
-    showPlayingIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'playing-indicator';
-        indicator.innerHTML = '<i class="fas fa-volume-up"></i> 正在播放...';
-        indicator.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
-            z-index: 9999;
-            font-size: 14px;
-        `;
-        
-        document.body.appendChild(indicator);
-        return indicator;
+    playAudioUrl(audioUrl) {
+        try {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(error => {
+                console.error('❌ 音频播放失败:', error);
+            });
+        } catch (error) {
+            console.error('❌ 创建音频对象失败:', error);
+        }
     }
 
-    hidePlayingIndicator(indicator) {
-        if (indicator && indicator.parentNode) {
-            indicator.parentNode.removeChild(indicator);
+    showSkillModal(skillName) {
+        console.log('🛠️ 显示技能模态框:', skillName);
+        
+        if (!this.currentCharacter) {
+            this.showError('请先选择一个角色');
+            return;
+        }
+        
+        const skillModal = document.getElementById('skillModal');
+        const skillModalTitle = document.getElementById('skillModalTitle');
+        const skillModalBody = document.getElementById('skillModalBody');
+        
+        if (!skillModal || !skillModalTitle || !skillModalBody) {
+            this.showError('技能模态框元素不存在');
+            return;
+        }
+        
+        // 设置技能标题和内容
+        const skillInfo = this.getSkillInfo(skillName);
+        if (!skillInfo) {
+            this.showError('技能信息不存在');
+            return;
+        }
+        
+        skillModalTitle.innerHTML = `<i class="${skillInfo.icon}"></i> ${skillInfo.title}`;
+        skillModalBody.innerHTML = skillInfo.content;
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(skillModal);
+        modal.show();
+        
+        // 保存当前技能
+        this.currentSkill = skillName;
+    }
+
+    getSkillInfo(skillName) {
+        const skillMap = {
+            'knowledge_qa': {
+                title: '知识问答',
+                icon: 'fas fa-question-circle',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">请输入您的问题：</label>
+                        <textarea class="form-control" id="skillQuestion" rows="3" placeholder="例如：什么是相对论？"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">问题类型：</label>
+                        <select class="form-select" id="skillQuestionType">
+                            <option value="general">一般问题</option>
+                            <option value="academic">学术问题</option>
+                            <option value="practical">实用问题</option>
+                            <option value="philosophical">哲学问题</option>
+                        </select>
+                    </div>
+                `
+            },
+            'emotional_support': {
+                title: '情感陪伴',
+                icon: 'fas fa-heart',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">您当前的情绪状态：</label>
+                        <select class="form-select" id="skillEmotion">
+                            <option value="happy">开心</option>
+                            <option value="sad">难过</option>
+                            <option value="anxious">焦虑</option>
+                            <option value="confused">困惑</option>
+                            <option value="angry">愤怒</option>
+                            <option value="lonely">孤独</option>
+                            <option value="stressed">压力大</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">请描述您的情况：</label>
+                        <textarea class="form-control" id="skillEmotionMessage" rows="4" placeholder="告诉我发生了什么，我会陪伴您..."></textarea>
+                    </div>
+                `
+            },
+            'teaching_guidance': {
+                title: '教学指导',
+                icon: 'fas fa-chalkboard-teacher',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">学习主题：</label>
+                        <input type="text" class="form-control" id="skillTopic" placeholder="例如：量子物理、古典文学、编程基础">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">您的水平：</label>
+                        <select class="form-select" id="skillLevel">
+                            <option value="beginner">初学者</option>
+                            <option value="intermediate">中级</option>
+                            <option value="advanced">高级</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">学习目标：</label>
+                        <textarea class="form-control" id="skillGoal" rows="2" placeholder="您希望通过学习达到什么目标？"></textarea>
+                    </div>
+                `
+            },
+            'creative_writing': {
+                title: '创作协助',
+                icon: 'fas fa-pen-fancy',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">创作类型：</label>
+                        <select class="form-select" id="skillWritingType">
+                            <option value="story">故事</option>
+                            <option value="poem">诗歌</option>
+                            <option value="essay">散文</option>
+                            <option value="dialogue">对话</option>
+                            <option value="script">剧本</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">创作主题：</label>
+                        <input type="text" class="form-control" id="skillTheme" placeholder="例如：友谊、冒险、爱情、科幻">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">风格要求：</label>
+                        <input type="text" class="form-control" id="skillStyle" placeholder="例如：幽默、悲伤、神秘、浪漫">
+                    </div>
+                `
+            },
+            'language_practice': {
+                title: '语言练习',
+                icon: 'fas fa-language',
+                content: `
+                    <div class="mb-3">
+                        <label class="form-label">练习语言：</label>
+                        <select class="form-select" id="skillLanguage">
+                            <option value="chinese">中文</option>
+                            <option value="english">英语</option>
+                            <option value="japanese">日语</option>
+                            <option value="korean">韩语</option>
+                            <option value="french">法语</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">练习类型：</label>
+                        <select class="form-select" id="skillPracticeType">
+                            <option value="conversation">对话练习</option>
+                            <option value="grammar">语法练习</option>
+                            <option value="vocabulary">词汇练习</option>
+                            <option value="pronunciation">发音练习</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">练习内容：</label>
+                        <textarea class="form-control" id="skillContent" rows="3" placeholder="请输入您想练习的内容..."></textarea>
+                    </div>
+                `
+            }
+        };
+        
+        return skillMap[skillName] || {
+            title: '未知技能',
+            content: '<p>技能信息不存在</p>'
+        };
+    }
+
+    async executeSkill() {
+        console.log('⚡ 执行技能:', this.currentSkill);
+        
+        if (!this.currentSkill) {
+            this.showError('请先选择一个技能');
+            return;
+        }
+        
+        if (!this.currentCharacter) {
+            this.showError('请先选择一个角色');
+            return;
+        }
+        
+        try {
+            // 收集技能参数
+            const skillData = this.collectSkillData(this.currentSkill);
+            
+            if (!skillData) {
+                this.showError('请填写完整的技能参数');
+                return;
+            }
+            
+            // 构建技能消息
+            let skillMessage = this.buildSkillMessage(this.currentSkill, skillData);
+            
+            // 关闭技能模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('skillModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // 发送技能消息
+            await this.sendSkillMessage(skillMessage);
+            
+        } catch (error) {
+            console.error('❌ 技能执行失败:', error);
+            this.showError('技能执行失败: ' + error.message);
+        }
+    }
+
+    buildSkillMessage(skillName, skillData) {
+        switch (skillName) {
+            case 'knowledge_qa':
+                return `【知识问答 - ${skillData.type}】${skillData.question}`;
+                
+            case 'emotional_support':
+                return `【情感陪伴 - ${skillData.emotion}】${skillData.message}`;
+                
+            case 'teaching_guidance':
+                return `【教学指导 - ${skillData.level}】主题：${skillData.topic}，目标：${skillData.goal || '基础学习'}`;
+                
+            case 'creative_writing':
+                return `【创作协助 - ${skillData.type}】主题：${skillData.theme}，风格：${skillData.style || '自由发挥'}`;
+                
+            case 'language_practice':
+                return `【语言练习 - ${skillData.language} ${skillData.type}】${skillData.topic}`;
+                
+            default:
+                return `【${skillName}】${JSON.stringify(skillData)}`;
+        }
+    }
+
+    collectSkillData(skillName) {
+        const skillDataMap = {
+            'knowledge_qa': () => {
+                const question = document.getElementById('skillQuestion')?.value?.trim();
+                const questionType = document.getElementById('skillQuestionType')?.value;
+                
+                if (!question) return null;
+                
+                return {
+                    question: question,
+                    type: questionType
+                };
+            },
+            'emotional_support': () => {
+                const emotion = document.getElementById('skillEmotion')?.value;
+                const message = document.getElementById('skillEmotionMessage')?.value?.trim();
+                
+                if (!message) return null;
+                
+                return {
+                    emotion: emotion,
+                    message: message
+                };
+            },
+            'teaching_guidance': () => {
+                const topic = document.getElementById('skillTopic')?.value?.trim();
+                const level = document.getElementById('skillLevel')?.value;
+                const goal = document.getElementById('skillGoal')?.value?.trim();
+                
+                if (!topic) return null;
+                
+                return {
+                    topic: topic,
+                    level: level,
+                    goal: goal
+                };
+            },
+            'creative_writing': () => {
+                const type = document.getElementById('skillWritingType')?.value;
+                const theme = document.getElementById('skillTheme')?.value?.trim();
+                const style = document.getElementById('skillStyle')?.value?.trim();
+                
+                if (!theme) return null;
+                
+                return {
+                    type: type,
+                    theme: theme,
+                    style: style
+                };
+            },
+            'language_practice': () => {
+                const language = document.getElementById('skillLanguage')?.value;
+                const practiceType = document.getElementById('skillPracticeType')?.value;
+                const topic = document.getElementById('skillPracticeTopic')?.value?.trim();
+                
+                if (!topic) return null;
+                
+                return {
+                    language: language,
+                    type: practiceType,
+                    topic: topic
+                };
+            }
+        };
+        
+        const collector = skillDataMap[skillName];
+        return collector ? collector() : null;
+    }
+
+    displaySkillResult(result) {
+        // 根据技能类型显示不同的结果
+        let message = '';
+        
+        switch (result.skill) {
+            case 'knowledge_qa':
+                message = `📚 ${result.character}的回答：\n\n${result.answer}`;
+                break;
+            case 'emotional_support':
+                message = `💝 ${result.character}的安慰：\n\n${result.support_message}`;
+                break;
+            case 'teaching_guidance':
+                message = `👨‍🏫 ${result.character}的教学：\n\n${result.lesson}`;
+                break;
+            case 'creative_writing':
+                message = `✍️ ${result.character}的创作：\n\n${result.creation}`;
+                break;
+            case 'language_practice':
+                message = `🗣️ ${result.character}的语言指导：\n\n${result.practice_content}`;
+                break;
+            default:
+                message = `🤖 ${result.character || '助手'}：\n\n${JSON.stringify(result, null, 2)}`;
+        }
+        
+        // 添加到聊天界面
+        this.addMessage(message, 'assistant');
+        
+        // 自动播放语音（如果有语音配置）
+        if (this.voiceConfig) {
+            this.playVoice(message);
+        }
+    }
+
+
+
+    async sendSkillMessage(message) {
+        try {
+            // 添加用户消息到界面
+            this.addMessage(message, 'user');
+            
+            // 发送到服务器
+            const response = await fetch('/api/chat/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    message: message,
+                    skill_type: this.currentSkill 
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.addMessage(data.response, 'assistant');
+                
+                // 自动播放语音回复
+                if (this.voiceConfig) {
+                    this.playVoice(data.response);
+                }
+            } else {
+                this.showError('发送消息失败: ' + data.error);
+            }
+        } catch (error) {
+            console.error('❌ 发送技能消息失败:', error);
+            this.showError('网络错误: ' + error.message);
         }
     }
 }
 
+// 确保DOM完全加载后再初始化应用
+console.log('📜 JavaScript文件开始加载，当前DOM状态:', document.readyState);
+
+function initializeApp() {
+    console.log('📄 开始初始化应用，DOM状态:', document.readyState);
+    console.log('📄 检查关键元素是否存在:');
+    console.log('  - charactersGrid:', !!document.getElementById('charactersGrid'));
+    console.log('  - loading:', !!document.getElementById('loading'));
+    
+    try {
+        window.app = new AIRoleplayApp();
+        console.log('✅ 应用实例创建成功');
+    } catch (error) {
+        console.error('❌ 应用初始化失败:', error);
+    }
+}
 
 
-// 初始化应用
-const app = new AIRoleplayApp();
+if (document.readyState === 'loading') {
+    console.log('📄 DOM正在加载，等待DOMContentLoaded事件...');
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    console.log('📄 DOM已就绪，立即初始化应用...');
+    initializeApp();
+}
+
+console.log('📜 JavaScript文件加载完成');
