@@ -1029,9 +1029,8 @@ def main():
     else:
         print("⚠️ 实时语音处理器启用失败，但不影响基本功能")
     
-    # 获取可用端口
-    port_manager = PortManager()
-    port = port_manager.find_available_port('localhost', 5000) or 5000
+    # 强制使用5000端口
+    port = 5000
     
     print(f"✓ 使用端口: {port}")
     print("=" * 50)
